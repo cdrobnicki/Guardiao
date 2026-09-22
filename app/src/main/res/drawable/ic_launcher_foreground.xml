@@ -1,0 +1,34 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    
+    <!-- Main Jet Body (Atari Yellow) -->
+    <path
+        android:fillColor="#FEE761"
+        android:pathData="
+            M50,30 h8 v8 h-8 z
+            M46,38 h16 v8 h-16 z
+            M46,46 h16 v24 h-16 z
+            M34,54 h40 v8 h-40 z
+            M26,62 h56 v4 h-56 z
+            M30,66 h4 v4 h-4 z
+            M74,66 h4 v4 h-4 z
+        " />
+        
+    <!-- Cockpit Detail (Cyan) -->
+    <path
+        android:fillColor="#00E5FF"
+        android:pathData="M50,42 h8 v4 h-8 z" />
+        
+    <!-- Wing Stripes/Engines (Atari Red) -->
+    <path
+        android:fillColor="#E30022"
+        android:pathData="
+            M42,54 h4 v8 h-4 z
+            M62,54 h4 v8 h-4 z
+            M46,70 h4 v8 h-4 z
+            M58,70 h4 v8 h-4 z
+        " />
+</vector>

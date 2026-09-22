@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- Armazenamento compartilhado principal (/storage/emulated/0). -->
+    <external-path name="external" path="." />
+    <!-- Cartões SD e outros volumes (/storage/XXXX-XXXX). -->
+    <root-path name="root" path="/storage/" />
+</paths>
