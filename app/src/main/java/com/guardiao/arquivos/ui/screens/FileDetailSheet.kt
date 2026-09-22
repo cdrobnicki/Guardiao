@@ -16,7 +16,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
+import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -26,6 +28,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -50,6 +53,8 @@ fun FileDetailSheet(
   onOpen: () -> Unit,
   onQuarantine: () -> Unit,
   onChooseQuarantineFolder: () -> Unit,
+  onIgnore: () -> Unit,
+  onDelete: () -> Unit,
 ) {
   val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
@@ -203,6 +208,36 @@ fun FileDetailSheet(
           color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
       }
+
+      Spacer(Modifier.height(6.dp))
+      HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+      Spacer(Modifier.height(6.dp))
+
+      // Ações secundárias: uma tira o arquivo de vista, a outra o apaga de vez.
+      Row(horizontalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.fillMaxWidth()) {
+        TextButton(onClick = onIgnore, enabled = !busy, modifier = Modifier.weight(1f)) {
+          Icon(Icons.Filled.VisibilityOff, contentDescription = null, modifier = Modifier.size(17.dp))
+          Spacer(Modifier.width(6.dp))
+          Text("Ignorar", style = MaterialTheme.typography.labelMedium)
+        }
+        TextButton(
+          onClick = onDelete,
+          enabled = !busy,
+          modifier = Modifier.weight(1f),
+          colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
+        ) {
+          Icon(Icons.Filled.DeleteForever, contentDescription = null, modifier = Modifier.size(17.dp))
+          Spacer(Modifier.width(6.dp))
+          Text("Excluir", style = MaterialTheme.typography.labelMedium)
+        }
+      }
+      Text(
+        "Ignorar esconde o arquivo das próximas varreduras, sem mexer nele. Excluir apaga o " +
+          "arquivo do aparelho em definitivo, sem lixeira.",
+        style = MaterialTheme.typography.labelSmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(top = 2.dp, start = 4.dp, end = 4.dp),
+      )
     }
   }
 }

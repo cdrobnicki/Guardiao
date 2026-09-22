@@ -20,16 +20,24 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.FilterList
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.SearchOff
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -51,6 +59,8 @@ fun FileListScreen(
   onToggleOnlyFlagged: () -> Unit,
   onSelect: (ScannedFile) -> Unit,
   onToggleSelection: (ScannedFile) -> Unit,
+  onIgnore: (ScannedFile) -> Unit,
+  onQuarantine: (ScannedFile) -> Unit,
   modifier: Modifier = Modifier,
 ) {
   Column(modifier = modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
@@ -104,6 +114,8 @@ fun FileListScreen(
             selectionMode = selectionMode,
             onOpen = { onSelect(file) },
             onToggleSelection = { onToggleSelection(file) },
+            onIgnore = { onIgnore(file) },
+            onQuarantine = { onQuarantine(file) },
           )
         }
       }
@@ -119,6 +131,8 @@ private fun FileRow(
   selectionMode: Boolean,
   onOpen: () -> Unit,
   onToggleSelection: () -> Unit,
+  onIgnore: () -> Unit,
+  onQuarantine: () -> Unit,
 ) {
   Card(
     modifier =
@@ -182,7 +196,7 @@ private fun FileRow(
           )
         }
       }
-      Spacer(Modifier.width(10.dp))
+      Spacer(Modifier.width(8.dp))
       Column(horizontalAlignment = Alignment.CenterHorizontally) {
         RiskScoreRing(score = file.analysis.score, level = file.riskLevel, diameter = 44.dp)
         Spacer(Modifier.size(4.dp))
@@ -192,6 +206,37 @@ private fun FileRow(
           color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
       }
+      // Fora do modo de seleção, cada linha tem suas próprias ações.
+      if (!selectionMode) {
+        RowActions(onIgnore = onIgnore, onQuarantine = onQuarantine)
+      }
+    }
+  }
+}
+
+@Composable
+private fun RowActions(onIgnore: () -> Unit, onQuarantine: () -> Unit) {
+  var aberto by remember { mutableStateOf(false) }
+
+  Box {
+    IconButton(onClick = { aberto = true }) {
+      Icon(Icons.Filled.MoreVert, contentDescription = "Ações do arquivo", modifier = Modifier.size(20.dp))
+    }
+    DropdownMenu(expanded = aberto, onDismissRequest = { aberto = false }) {
+      DropdownMenuItem(
+        text = { Text("Mover para a quarentena") },
+        onClick = {
+          aberto = false
+          onQuarantine()
+        },
+      )
+      DropdownMenuItem(
+        text = { Text("Ignorar nas próximas varreduras") },
+        onClick = {
+          aberto = false
+          onIgnore()
+        },
+      )
     }
   }
 }

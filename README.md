@@ -35,6 +35,12 @@ app ou **movê-lo para uma pasta de quarentena** escolhida pelo usuário (e rest
 
   Todas são decodificadas no tamanho exibido e mantidas **apenas em memória**: nenhuma cópia de
   conteúdo pessoal é gravada em cache no disco.
+- **Ignorar arquivos**: pelo menu de cada linha da lista, pelo detalhe do arquivo ou em lote na
+  seleção múltipla. O arquivo continua onde está — apenas deixa de ser analisado nas próximas
+  varreduras. A tela inicial mostra quantos estão ignorados e leva a uma lista onde cada um pode
+  voltar a ser considerado.
+- **Excluir**: no detalhe do arquivo, apaga o arquivo do aparelho em definitivo, com confirmação.
+  Não há lixeira — para guardar sem apagar, existe a quarentena.
 - **Quarentena em lote**: um botão na tela inicial manda de uma vez todos os arquivos de risco
   alto, com confirmação e barra de progresso. Na lista, segure um arquivo para entrar no modo de
   seleção e marcar vários — a barra do topo mostra quantos estão marcados e move todos juntos.
@@ -107,6 +113,7 @@ app/src/main/java/com/guardiao/arquivos/
 │   └── PrivacyAnalyzer.kt / AndroidMediaInspector.kt
 ├── quarantine/      # banco Room com o histórico, movimentação/restauração e ordenação
 ├── openwith/        # memória de qual app abre cada tipo de arquivo
+├── ignore/          # banco próprio com os arquivos fora das varreduras
 └── ui/              # ViewModel e telas em Jetpack Compose
     ├── theme/       # paleta da marca, cores de risco e escala tipográfica
     ├── thumbnail/   # geração das miniaturas de PDF e de documentos de texto

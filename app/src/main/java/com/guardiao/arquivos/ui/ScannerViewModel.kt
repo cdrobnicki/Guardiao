@@ -11,7 +11,11 @@ import com.guardiao.arquivos.quarantine.QuarantineRecord
 import com.guardiao.arquivos.quarantine.QuarantineSort
 import com.guardiao.arquivos.quarantine.sortedBy
 import com.guardiao.arquivos.openwith.OpenWithPreferences
+import com.guardiao.arquivos.ignore.IgnoreDatabase
+import com.guardiao.arquivos.ignore.IgnoredFile
+import com.guardiao.arquivos.ignore.IgnoredFileDao
 import com.guardiao.arquivos.scanner.FileCategory
+import com.guardiao.arquivos.scanner.FileDeleter
 import com.guardiao.arquivos.scanner.FileScanner
 import com.guardiao.arquivos.scanner.RiskLevel
 import com.guardiao.arquivos.scanner.ScanEvent
@@ -35,6 +39,9 @@ sealed class Screen {
   data class FileList(val category: FileCategory?) : Screen()
 
   data object Quarantine : Screen()
+
+  /** Revisão do que foi mandado ignorar, para poder voltar atrás. */
+  data object Ignored : Screen()
 }
 
 /** Estado da varredura. */
@@ -86,6 +93,9 @@ data class ScannerUiState(
   val quarantineCompact: Boolean = false,
   /** Quantos tipos de arquivo já têm um app lembrado para abrir. */
   val rememberedApps: Int = 0,
+  val ignored: List<IgnoredFile> = emptyList(),
+  /** Arquivo aguardando confirmação de exclusão definitiva. */
+  val pendingDeletion: ScannedFile? = null,
 ) {
   val summaries: List<CategorySummary> =
     FileCategory.entries.map { category ->
@@ -134,6 +144,8 @@ class ScannerViewModel(application: Application) : AndroidViewModel(application)
   private val scanner = FileScanner(application)
   private val quarantine = QuarantineManager(application, QuarantineDatabase.get(application).quarantineDao())
   private val openWith = OpenWithPreferences(application)
+  private val ignoredFiles: IgnoredFileDao = IgnoreDatabase.get(application).ignoredFileDao()
+  private val deleter = FileDeleter(application)
 
   private val _uiState = MutableStateFlow(ScannerUiState())
   val uiState: StateFlow<ScannerUiState> = _uiState.asStateFlow()
@@ -148,6 +160,9 @@ class ScannerViewModel(application: Application) : AndroidViewModel(application)
       QuarantineDatabase.get(application).quarantineDao().observeAll().collect { records ->
         _uiState.update { it.copy(quarantined = records) }
       }
+    }
+    viewModelScope.launch {
+      ignoredFiles.observeAll().collect { lista -> _uiState.update { it.copy(ignored = lista) } }
     }
   }
 
@@ -186,7 +201,8 @@ class ScannerViewModel(application: Application) : AndroidViewModel(application)
     scanJob =
       viewModelScope.launch {
         try {
-          scanner.scan(excluded).collect { event ->
+          val ignorados = runCatching { ignoredFiles.paths().toSet() }.getOrDefault(emptySet())
+          scanner.scan(excluded, ignorados).collect { event ->
             when (event) {
               is ScanEvent.Found -> found += event.file
               is ScanEvent.Progress ->
@@ -232,6 +248,10 @@ class ScannerViewModel(application: Application) : AndroidViewModel(application)
 
   fun openQuarantine() {
     _uiState.update { it.copy(screen = Screen.Quarantine, selectedFile = null, selectedPaths = emptySet()) }
+  }
+
+  fun openIgnored() {
+    _uiState.update { it.copy(screen = Screen.Ignored, selectedFile = null, selectedPaths = emptySet()) }
   }
 
   fun goHome() {
@@ -434,6 +454,96 @@ class ScannerViewModel(application: Application) : AndroidViewModel(application)
       falhas == 0 -> "$movidos arquivo(s) movido(s) para a quarentena."
       else -> "$movidos movido(s), $falhas não${ultimoErro?.let { " ($it)" } ?: ""}."
     }
+
+  // ------------------------------------------------------------------------------------------
+  // Ignorar nas próximas varreduras
+  // ------------------------------------------------------------------------------------------
+
+  /**
+   * Marca arquivos para não aparecerem mais. Eles somem da lista atual na hora, e a varredura
+   * seguinte nem chega a analisá-los.
+   */
+  fun ignore(files: List<ScannedFile>) {
+    if (files.isEmpty()) return
+    viewModelScope.launch {
+      val registros = files.map { IgnoredFile(path = it.path, fileName = it.name) }
+      runCatching { ignoredFiles.insertAll(registros) }
+        .onSuccess {
+          val caminhos = files.map { it.path }.toSet()
+          _uiState.update { state ->
+            state.copy(
+              files = state.files.filterNot { it.path in caminhos },
+              selectedPaths = emptySet(),
+              selectedFile = null,
+              message =
+                if (files.size == 1) "“${files.first().name}” não aparecerá nas próximas varreduras."
+                else "${files.size} arquivo(s) não aparecerão nas próximas varreduras.",
+            )
+          }
+        }
+        .onFailure { erro -> showMessage("Não foi possível ignorar: ${erro.message}") }
+    }
+  }
+
+  fun ignoreSelected() {
+    val marcados = _uiState.value.let { state -> state.files.filter { it.path in state.selectedPaths } }
+    if (marcados.isEmpty()) showMessage("Nenhum arquivo marcado.") else ignore(marcados)
+  }
+
+  /** Volta a considerar o arquivo nas varreduras. Só vale a partir da próxima. */
+  fun unignore(path: String) {
+    viewModelScope.launch {
+      runCatching { ignoredFiles.remove(path) }
+        .onSuccess { showMessage("Voltará a aparecer na próxima varredura.") }
+        .onFailure { erro -> showMessage("Não foi possível desfazer: ${erro.message}") }
+    }
+  }
+
+  fun clearIgnored() {
+    viewModelScope.launch {
+      runCatching { ignoredFiles.clear() }
+        .onSuccess { showMessage("Lista de ignorados limpa.") }
+        .onFailure { erro -> showMessage("Não foi possível limpar: ${erro.message}") }
+    }
+  }
+
+  // ------------------------------------------------------------------------------------------
+  // Exclusão definitiva
+  // ------------------------------------------------------------------------------------------
+
+  fun askDelete(file: ScannedFile) {
+    _uiState.update { it.copy(pendingDeletion = file) }
+  }
+
+  fun dismissDeletion() {
+    _uiState.update { it.copy(pendingDeletion = null) }
+  }
+
+  /** Apaga em definitivo. Não há lixeira: quem chama já confirmou com o usuário. */
+  fun confirmDelete() {
+    val alvo = _uiState.value.pendingDeletion ?: return
+    viewModelScope.launch {
+      _uiState.update { it.copy(busy = true, pendingDeletion = null) }
+      deleter.delete(alvo).fold(
+        onSuccess = {
+          _uiState.update { state ->
+            state.copy(
+              busy = false,
+              files = state.files.filterNot { it.path == alvo.path },
+              selectedPaths = state.selectedPaths - alvo.path,
+              selectedFile = null,
+              message = "“${alvo.name}” foi apagado do aparelho.",
+            )
+          }
+        },
+        onFailure = { erro ->
+          _uiState.update {
+            it.copy(busy = false, message = "Não foi possível apagar: ${erro.message}")
+          }
+        },
+      )
+    }
+  }
 
   fun restore(record: QuarantineRecord) {
     viewModelScope.launch {

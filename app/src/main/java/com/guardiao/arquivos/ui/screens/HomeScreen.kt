@@ -26,6 +26,7 @@ import androidx.compose.material.icons.filled.OpenInBrowser
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -67,6 +68,7 @@ fun HomeScreen(
   onOpenCategory: (FileCategory?) -> Unit,
   onQuarantineHighRisk: () -> Unit,
   onForgetOpenWithChoices: () -> Unit,
+  onOpenIgnored: () -> Unit,
   modifier: Modifier = Modifier,
 ) {
   val hasResults = state.files.isNotEmpty() || state.scanStatus is ScanStatus.Finished
@@ -100,6 +102,19 @@ fun HomeScreen(
         actionLabel = if (state.quarantineFolder == null) "Escolher" else "Trocar",
         onAction = onChooseQuarantineFolder,
       )
+    }
+
+    if (state.ignored.isNotEmpty()) {
+      item {
+        SetupRow(
+          icon = Icons.Filled.VisibilityOff,
+          title = "Arquivos ignorados",
+          subtitle = "${formatCount(state.ignored.size)} arquivo(s) fora das varreduras",
+          done = true,
+          actionLabel = "Ver",
+          onAction = onOpenIgnored,
+        )
+      }
     }
 
     if (state.rememberedApps > 0) {

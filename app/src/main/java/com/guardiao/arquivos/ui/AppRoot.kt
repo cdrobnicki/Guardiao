@@ -19,9 +19,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DoneAll
+import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Badge
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -56,6 +59,7 @@ import com.guardiao.arquivos.ui.screens.DogMark
 import com.guardiao.arquivos.ui.screens.FileDetailSheet
 import com.guardiao.arquivos.ui.screens.FileListScreen
 import com.guardiao.arquivos.ui.screens.HomeScreen
+import com.guardiao.arquivos.ui.screens.IgnoredScreen
 import com.guardiao.arquivos.ui.screens.QuarantineScreen
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -145,6 +149,7 @@ fun AppRoot(viewModel: ScannerViewModel) {
           onClear = viewModel::clearSelection,
           onSelectAll = viewModel::selectAllVisible,
           onQuarantine = viewModel::askQuarantineSelected,
+          onIgnore = viewModel::ignoreSelected,
         )
       } else {
         MainTopBar(
@@ -177,6 +182,7 @@ fun AppRoot(viewModel: ScannerViewModel) {
               onOpenCategory = viewModel::openCategory,
               onQuarantineHighRisk = viewModel::askQuarantineHighRisk,
               onForgetOpenWithChoices = viewModel::forgetOpenWithChoices,
+              onOpenIgnored = viewModel::openIgnored,
             )
           is Screen.FileList ->
             FileListScreen(
@@ -187,7 +193,11 @@ fun AppRoot(viewModel: ScannerViewModel) {
               onToggleOnlyFlagged = viewModel::toggleOnlyFlagged,
               onSelect = viewModel::selectFile,
               onToggleSelection = viewModel::toggleSelection,
+              onIgnore = { viewModel.ignore(listOf(it)) },
+              onQuarantine = viewModel::quarantineFile,
             )
+          Screen.Ignored ->
+            IgnoredScreen(ignored = state.ignored, onUnignore = viewModel::unignore)
           Screen.Quarantine ->
             QuarantineScreen(
               records = state.sortedQuarantine,
@@ -219,6 +229,29 @@ fun AppRoot(viewModel: ScannerViewModel) {
     )
   }
 
+  state.pendingDeletion?.let { alvo ->
+    AlertDialog(
+      onDismissRequest = viewModel::dismissDeletion,
+      icon = { Icon(Icons.Filled.DeleteForever, contentDescription = null) },
+      title = { Text("Apagar “${alvo.name}”?") },
+      text = {
+        Text(
+          "O arquivo será removido do aparelho em definitivo. Não há lixeira: não dá para " +
+            "desfazer. Para guardá-lo sem apagar, use a quarentena."
+        )
+      },
+      confirmButton = {
+        TextButton(
+          onClick = viewModel::confirmDelete,
+          colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
+        ) {
+          Text("Apagar de vez")
+        }
+      },
+      dismissButton = { TextButton(onClick = viewModel::dismissDeletion) { Text("Cancelar") } },
+    )
+  }
+
   val selected = state.selectedFile
   if (selected != null) {
     FileDetailSheet(
@@ -229,6 +262,8 @@ fun AppRoot(viewModel: ScannerViewModel) {
       onOpen = { open(viewModel.openRequest(selected)) },
       onQuarantine = { viewModel.quarantineFile(selected) },
       onChooseQuarantineFolder = chooseFolder,
+      onIgnore = { viewModel.ignore(listOf(selected)) },
+      onDelete = { viewModel.askDelete(selected) },
     )
   }
 }
@@ -268,6 +303,7 @@ private fun MainTopBar(
             style = MaterialTheme.typography.titleMedium,
           )
         Screen.Quarantine -> Text("Quarentena", style = MaterialTheme.typography.titleMedium)
+        Screen.Ignored -> Text("Arquivos ignorados", style = MaterialTheme.typography.titleMedium)
       }
     },
     navigationIcon = {
@@ -300,6 +336,7 @@ private fun SelectionTopBar(
   onClear: () -> Unit,
   onSelectAll: () -> Unit,
   onQuarantine: () -> Unit,
+  onIgnore: () -> Unit,
 ) {
   TopAppBar(
     colors =
@@ -318,6 +355,9 @@ private fun SelectionTopBar(
     actions = {
       IconButton(onClick = onSelectAll, enabled = !busy) {
         Icon(Icons.Filled.DoneAll, contentDescription = "Marcar todos")
+      }
+      IconButton(onClick = onIgnore, enabled = !busy) {
+        Icon(Icons.Filled.VisibilityOff, contentDescription = "Ignorar os marcados")
       }
       IconButton(onClick = onQuarantine, enabled = !busy) {
         Icon(Icons.Filled.Shield, contentDescription = "Mover marcados para a quarentena")

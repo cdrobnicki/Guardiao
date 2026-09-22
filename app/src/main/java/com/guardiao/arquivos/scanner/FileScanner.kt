@@ -33,8 +33,16 @@ class FileScanner(
 
   private val skippedDirectoryNames = setOf(".thumbnails", ".trashed", ".cache", "cache", "LOST.DIR", ".Trash")
 
-  /** Inicia a varredura. [excludedPaths] são pastas que não devem ser percorridas (ex.: quarentena). */
-  fun scan(excludedPaths: List<String> = emptyList()): Flow<ScanEvent> =
+  /**
+   * Inicia a varredura.
+   *
+   * [excludedPaths] são pastas que não devem ser percorridas (a de quarentena, por exemplo), e
+   * [ignoredPaths] são arquivos que o usuário mandou ignorar.
+   */
+  fun scan(
+    excludedPaths: List<String> = emptyList(),
+    ignoredPaths: Set<String> = emptySet(),
+  ): Flow<ScanEvent> =
     flow {
       val roots = StorageAccess.storageRoots(context)
       val excluded = excludedPaths.map { it.trimEnd('/') }.filter { it.isNotBlank() }
@@ -72,6 +80,9 @@ class FileScanner(
           }
           if (!child.isFile) continue
           scanned++
+          // Ignorado pelo usuário: nem a categoria nem o conteúdo são examinados, que é o que
+          // "ignorar nas próximas varreduras" promete.
+          if (child.absolutePath in ignoredPaths) continue
           val category = FileCategory.fromFileName(child.name) ?: continue
           val scannedFile = analyzeFile(child, category)
           matched++
