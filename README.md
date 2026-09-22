@@ -21,6 +21,9 @@ app ou **movê-lo para uma pasta de quarentena** escolhida pelo usuário (e rest
     (áudios sem tags de música são tratados como prováveis gravações de voz).
   - Cada arquivo recebe uma pontuação de 0 a 100 e um nível: **Alto**, **Médio**, **Baixo** ou
     **Sem indícios**, com a lista de evidências encontradas (dados sensíveis são exibidos mascarados).
+- **Miniaturas** das fotos e dos vídeos nas listas, no detalhe e na quarentena, para revisar sem
+  precisar abrir cada arquivo. São decodificadas no tamanho exibido e mantidas **apenas em
+  memória**: nenhuma cópia de conteúdo pessoal é gravada em cache no disco.
 - **Abrir** qualquer arquivo no app apropriado (via FileProvider).
 - **Quarentena**: escolha uma pasta pelo seletor do sistema; arquivos movidos ficam listados na
   aba Quarentena, de onde podem ser abertos, **restaurados** para o local original ou esquecidos.
@@ -59,15 +62,17 @@ debug como artefato a cada push.
 ## Estrutura
 
 ```
-app/src/main/java/com/example/
+app/src/main/java/com/guardiao/arquivos/
 ├── MainActivity.kt
-├── scanner/        # categorias, varredura, heurísticas e extração de texto
+├── GuardiaoApp.kt   # carregador de miniaturas (somente em memória, sem cache em disco)
+├── scanner/         # categorias, varredura, heurísticas e extração de texto
 │   ├── FileCategory.kt / Models.kt
 │   ├── FileScanner.kt / StoragePermissions.kt
 │   ├── PatternDetectors.kt / FilenameHeuristics.kt / TextExtractor.kt
 │   └── PrivacyAnalyzer.kt / AndroidMediaInspector.kt
-├── quarantine/     # banco Room com o histórico e movimentação/restauração de arquivos
-└── ui/             # ViewModel e telas em Jetpack Compose
+├── quarantine/      # banco Room com o histórico e movimentação/restauração de arquivos
+└── ui/              # ViewModel e telas em Jetpack Compose
+    └── screens/     # início, lista por categoria, detalhe, quarentena e miniaturas
 ```
 
 ## Limitações conhecidas
@@ -76,3 +81,5 @@ app/src/main/java/com/example/
   negativos (ex.: fotos de documentos não são reconhecidas por OCR).
 - PDFs com fontes com codificação personalizada ou apenas imagens não têm texto extraído.
 - Arquivos dentro de `Android/data` de outros apps não são acessíveis pelo sistema.
+- Miniaturas de HEIC/HEIF dependem do Android 9 ou superior; abaixo disso a lista mostra o ícone da
+  categoria no lugar da pré-visualização.

@@ -22,10 +22,10 @@ kotlinxCoroutinesCore = "1.10.2"
 robolectric = "4.16.1"
 exifinterface = "1.3.7"
 documentfile = "1.0.1"
-# Ainda não usadas; disponíveis para as próximas telas (navegação, preferências, miniaturas).
+coil = "2.7.0"
+# Ainda não usadas; disponíveis para as próximas telas (navegação, preferências).
 navigationCompose = "2.8.9"
 datastorePreferences = "1.1.7"
-coilCompose = "2.7.0"
 
 
 [libraries]
@@ -60,7 +60,8 @@ androidx-exifinterface = { group = "androidx.exifinterface", name = "exifinterfa
 androidx-documentfile = { group = "androidx.documentfile", name = "documentfile", version.ref = "documentfile" }
 androidx-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigationCompose" }
 androidx-datastore-preferences = { group = "androidx.datastore", name = "datastore-preferences", version.ref = "datastorePreferences" }
-coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coilCompose" }
+coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coil" }
+coil-video = { group = "io.coil-kt", name = "coil-video", version.ref = "coil" }
 
 
 [plugins]
