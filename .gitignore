@@ -15,3 +15,7 @@
 .cxx
 local.properties
 debug.keystore
+upload-keystore.jks
+*.jks
+*.keystore
+*.aab

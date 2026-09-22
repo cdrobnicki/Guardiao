@@ -113,6 +113,18 @@ app/src/main/java/com/guardiao/arquivos/
     └── screens/     # início, lista, detalhe, quarentena, miniaturas, anel de risco e o cão
 ```
 
+## Publicação na Google Play
+
+Os textos da ficha da loja, os gráficos obrigatórios, as respostas do formulário de Segurança dos
+dados e o passo a passo estão em [`docs/play/publicacao.md`](docs/play/publicacao.md).
+
+O workflow **Build AAB (release)** gera o pacote assinado para a loja a partir da chave de upload
+guardada nos secrets do repositório. A chave nunca entra no código: `app/build.gradle.kts` a lê de
+variáveis de ambiente e, sem ela, apenas produz um pacote não assinado em vez de falhar.
+
+Um aviso importante está no topo daquele arquivo: a permissão de acesso a todos os arquivos é a
+mais restrita da Play Store e a aprovação não é garantida.
+
 ## Limitações conhecidas
 
 - A análise é heurística: pode haver falsos positivos (ex.: números que parecem CPF) e falsos

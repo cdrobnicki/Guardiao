@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Política de Privacidade — Guardião de Arquivos</title>
+<style>
+  :root { --tinta:#1A1D21; --suave:#48525C; --marca:#1A4E78; --borda:#C8D0D8; --fundo:#F7F9FB; --cartao:#FFFFFF; }
+  @media (prefers-color-scheme: dark) {
+    :root { --tinta:#E3E7EB; --suave:#C2CBD4; --marca:#9DC8EF; --borda:#3B444D; --fundo:#0F1317; --cartao:#151A1F; }
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--fundo); color:var(--tinta); line-height:1.65;
+         font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; }
+  main { max-width:760px; margin:0 auto; padding:32px 20px 72px; }
+  h1 { font-size:1.9rem; line-height:1.25; margin:0 0 4px; letter-spacing:-0.5px; }
+  h2 { font-size:1.2rem; margin:36px 0 10px; letter-spacing:-0.2px; }
+  .sub { color:var(--suave); margin:0 0 28px; }
+  .destaque { background:var(--cartao); border:1px solid var(--borda); border-left:4px solid var(--marca);
+              border-radius:10px; padding:16px 18px; margin:24px 0; }
+  ul { padding-left:22px; } li { margin:6px 0; }
+  code { background:var(--cartao); border:1px solid var(--borda); border-radius:5px; padding:1px 5px; font-size:.9em; }
+  footer { color:var(--suave); font-size:.88rem; margin-top:44px; border-top:1px solid var(--borda); padding-top:16px; }
+  a { color:var(--marca); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Política de Privacidade</h1>
+  <p class="sub">Guardião de Arquivos · atualizada em 22 de setembro de 2026</p>
+
+  <div class="destaque">
+    <strong>Resumo:</strong> o Guardião de Arquivos não coleta, não transmite e não compartilha
+    nenhum dado. Toda a análise acontece dentro do seu aparelho. O app não tem sequer permissão
+    de acesso à internet.
+  </div>
+
+  <h2>Que dados o app coleta</h2>
+  <p>
+    Nenhum. O app não possui servidor, não cria conta, não usa serviços de análise, publicidade ou
+    rastreamento, e não envia arquivos, nomes de arquivos, resultados de análise ou identificadores
+    do aparelho para lugar algum.
+  </p>
+  <p>
+    Isso é verificável: o app não declara a permissão <code>android.permission.INTERNET</code> no
+    seu manifesto. Sem essa permissão, o sistema Android impede qualquer conexão de rede,
+    independentemente do que o código tentasse fazer. O código-fonte é público em
+    <a href="https://github.com/cdrobnicki/Guardiao">github.com/cdrobnicki/Guardiao</a>.
+  </p>
+
+  <h2>Que dados o app acessa no aparelho</h2>
+  <p>
+    Para cumprir sua função, o app lê os arquivos do armazenamento do aparelho e os analisa
+    localmente:
+  </p>
+  <ul>
+    <li>nomes, caminhos, tamanhos e datas dos arquivos;</li>
+    <li>o conteúdo em texto de documentos (PDF, Word, ODT, RTF, TXT e semelhantes), para procurar
+        indícios de dados pessoais;</li>
+    <li>metadados de fotos, vídeos e áudios (EXIF), incluindo coordenadas de GPS, quando existirem;</li>
+    <li>as primeiras páginas de PDFs e as imagens, para gerar miniaturas.</li>
+  </ul>
+  <p>
+    Tudo isso é processado na memória do aparelho e descartado ao fechar o app. As miniaturas ficam
+    apenas em memória: o cache em disco é desligado de propósito, para não criar uma segunda cópia
+    de conteúdo pessoal no armazenamento.
+  </p>
+
+  <h2>Que dados o app guarda</h2>
+  <ul>
+    <li><strong>Histórico da quarentena:</strong> nome, caminho de origem, caminho de destino,
+        tamanho e categoria dos arquivos que você mandou para a quarentena, para poder restaurá-los.</li>
+    <li><strong>Suas preferências:</strong> a pasta de quarentena escolhida e qual app você escolheu
+        para abrir cada tipo de arquivo.</li>
+  </ul>
+  <p>
+    Esses dados ficam na área privada do app, no seu aparelho, e são apagados quando você desinstala
+    o app. O backup automático do Google está <strong>desativado</strong> para o app, de modo que
+    nem essa lista sai do aparelho.
+  </p>
+
+  <h2>Permissões e por que são necessárias</h2>
+  <ul>
+    <li><strong>Acesso a todos os arquivos</strong> (<code>MANAGE_EXTERNAL_STORAGE</code>, Android 11+):
+        é a função central do app. Sem ela, seria impossível encontrar documentos fora das pastas de
+        mídia e mover arquivos para a pasta de quarentena que você escolher.</li>
+    <li><strong>Leitura e escrita do armazenamento</strong> (Android 10 e anteriores): mesma
+        finalidade, nas versões antigas do sistema.</li>
+  </ul>
+  <p>Você pode revogar essas permissões a qualquer momento nos ajustes do Android.</p>
+
+  <h2>Compartilhamento com terceiros</h2>
+  <p>
+    Não há. O app não integra SDKs de terceiros que coletem dados. Quando você toca em “Abrir”, o
+    arquivo é entregue ao app que você escolher — esse app passa a ser regido pela política de
+    privacidade dele, não por esta.
+  </p>
+
+  <h2>Crianças</h2>
+  <p>
+    O app não é direcionado a crianças e não coleta dados de ninguém, de qualquer idade.
+  </p>
+
+  <h2>Mudanças nesta política</h2>
+  <p>
+    Se esta política mudar, a data no topo será atualizada e a versão anterior continuará visível no
+    histórico do repositório público.
+  </p>
+
+  <h2>Contato</h2>
+  <p>
+    Dúvidas sobre privacidade: <a href="mailto:SEU-EMAIL@exemplo.com">SEU-EMAIL@exemplo.com</a>.
+  </p>
+
+  <footer>
+    Guardião de Arquivos · código-fonte em
+    <a href="https://github.com/cdrobnicki/Guardiao">github.com/cdrobnicki/Guardiao</a>
+  </footer>
+</main>
+</body>
+</html>

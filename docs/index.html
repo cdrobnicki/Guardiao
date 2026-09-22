@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Guardião de Arquivos</title>
+<style>
+  :root { --tinta:#1A1D21; --suave:#48525C; --marca:#1A4E78; --borda:#C8D0D8; --fundo:#F7F9FB; --cartao:#FFFFFF; }
+  @media (prefers-color-scheme: dark) {
+    :root { --tinta:#E3E7EB; --suave:#C2CBD4; --marca:#9DC8EF; --borda:#3B444D; --fundo:#0F1317; --cartao:#151A1F; }
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--fundo); color:var(--tinta); line-height:1.65;
+         font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; }
+  main { max-width:760px; margin:0 auto; padding:40px 20px 72px; }
+  img.destaque { width:100%; height:auto; border-radius:14px; border:1px solid var(--borda); }
+  h1 { font-size:2rem; margin:28px 0 6px; letter-spacing:-0.6px; }
+  p.sub { color:var(--suave); margin:0 0 24px; font-size:1.05rem; }
+  ul { padding-left:22px; } li { margin:8px 0; }
+  a.botao { display:inline-block; background:var(--marca); color:#fff; text-decoration:none;
+            padding:12px 20px; border-radius:12px; font-weight:600; margin:8px 8px 8px 0; }
+  a { color:var(--marca); }
+  footer { color:var(--suave); font-size:.88rem; margin-top:44px; border-top:1px solid var(--borda); padding-top:16px; }
+</style>
+</head>
+<body>
+<main>
+  <img class="destaque" src="play/destaque-1024x500.png" alt="Guardião de Arquivos">
+  <h1>Guardião de Arquivos</h1>
+  <p class="sub">
+    Descubra quais arquivos do seu celular guardam informações pessoais. Toda a análise acontece
+    no aparelho — o app não tem permissão de internet.
+  </p>
+
+  <ul>
+    <li>Varre fotos, vídeos, áudios, PDFs, documentos, planilhas e apresentações.</li>
+    <li>Dá a cada arquivo uma pontuação de risco de 0 a 100 e explica o que encontrou.</li>
+    <li>Move o que você quiser para uma pasta de quarentena — e restaura depois.</li>
+  </ul>
+
+  <p>
+    <a class="botao" href="https://github.com/cdrobnicki/Guardiao/releases/latest/download/guardiao.apk">Baixar o APK de teste</a>
+    <a class="botao" href="politica-de-privacidade.html" style="background:transparent;color:var(--marca);border:1px solid var(--borda)">Política de privacidade</a>
+  </p>
+
+  <footer>
+    Código-fonte em <a href="https://github.com/cdrobnicki/Guardiao">github.com/cdrobnicki/Guardiao</a>
+  </footer>
+</main>
+</body>
+</html>

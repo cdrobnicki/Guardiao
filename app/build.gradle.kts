@@ -4,6 +4,12 @@ plugins {
   alias(libs.plugins.google.devtools.ksp)
 }
 
+// Chave de upload da Play Store. O caminho padrão está no .gitignore — a chave é a identidade
+// do app na loja e perdê-la impede publicar atualizações.
+val uploadKeystore: File = file(System.getenv("KEYSTORE_PATH") ?: "${rootDir}/upload-keystore.jks")
+val hasUploadKeystore: Boolean =
+  uploadKeystore.exists() && !System.getenv("STORE_PASSWORD").isNullOrBlank()
+
 android {
   namespace = "com.guardiao.arquivos"
   compileSdk { version = release(36) { minorApiLevel = 1 } }
@@ -19,12 +25,15 @@ android {
   }
 
   signingConfigs {
-    create("release") {
-      val keystorePath = System.getenv("KEYSTORE_PATH") ?: "${rootDir}/my-upload-key.jks"
-      storeFile = file(keystorePath)
-      storePassword = System.getenv("STORE_PASSWORD")
-      keyAlias = "upload"
-      keyPassword = System.getenv("KEY_PASSWORD")
+    // A chave de upload nunca entra no repositório: vem de variáveis de ambiente, preenchidas
+    // pelos secrets do GitHub Actions ou pelo ambiente de quem compila localmente.
+    if (hasUploadKeystore) {
+      create("release") {
+        storeFile = uploadKeystore
+        storePassword = System.getenv("STORE_PASSWORD")
+        keyAlias = System.getenv("KEY_ALIAS") ?: "upload"
+        keyPassword = System.getenv("KEY_PASSWORD")
+      }
     }
     create("debugConfig") {
       storeFile = file("${rootDir}/debug.keystore")
@@ -37,9 +46,13 @@ android {
   buildTypes {
     release {
       isCrunchPngs = false
+      // R8 fica desligado nesta primeira publicação: o app usa Room e Coil, que dependem de
+      // reflexão, e encolher o código sem poder testar em aparelho arriscaria quebrar em
+      // produção. Vale ligar depois, com um teste do APK de release em mãos.
       isMinifyEnabled = false
       proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-      signingConfig = signingConfigs.getByName("release")
+      // Sem a chave, gera um pacote não assinado em vez de falhar: útil para conferir o build.
+      signingConfig = if (hasUploadKeystore) signingConfigs.getByName("release") else null
     }
     debug { signingConfig = signingConfigs.getByName("debugConfig") }
   }
