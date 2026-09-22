@@ -33,6 +33,13 @@ import com.guardiao.arquivos.scanner.ScannedFile
 import com.guardiao.arquivos.ui.icon
 import java.io.File
 
+/**
+ * Categorias que ganham pré-visualização. Planilhas e apresentações ficam de fora: um despejo de
+ * células ou de tópicos não ajuda a reconhecer o arquivo em miniatura.
+ */
+private val previewCategories =
+  setOf(FileCategory.IMAGE, FileCategory.VIDEO, FileCategory.PDF, FileCategory.DOCUMENT)
+
 /** Miniatura de um arquivo encontrado na varredura. */
 @Composable
 fun FileThumbnail(file: ScannedFile, size: Dp, modifier: Modifier = Modifier) {
@@ -59,12 +66,13 @@ fun QuarantineThumbnail(record: QuarantineRecord, size: Dp, modifier: Modifier =
 }
 
 /**
- * Mostra uma pré-visualização para fotos e vídeos e o ícone da categoria para o restante.
+ * Mostra uma pré-visualização para fotos, vídeos, PDFs e documentos de texto, e o ícone da
+ * categoria para o restante.
  *
  * As miniaturas são decodificadas no tamanho em que serão exibidas e mantidas apenas em memória
  * (ver [com.guardiao.arquivos.GuardiaoApp]). Se a decodificação falhar — formato não suportado pela
- * versão do Android, arquivo corrompido ou vídeo sem quadro legível — o ícone da categoria entra no
- * lugar.
+ * versão do Android, arquivo corrompido, vídeo sem quadro legível, PDF protegido por senha ou
+ * documento sem texto — o ícone da categoria entra no lugar.
  */
 @Composable
 private fun Thumbnail(
@@ -74,7 +82,7 @@ private fun Thumbnail(
   size: Dp,
   modifier: Modifier = Modifier,
 ) {
-  val showsPreview = category == FileCategory.IMAGE || category == FileCategory.VIDEO
+  val showsPreview = category != null && category in previewCategories
   var failed by remember(cacheKey) { mutableStateOf(false) }
 
   Box(

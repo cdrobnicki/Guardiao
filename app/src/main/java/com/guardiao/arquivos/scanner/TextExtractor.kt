@@ -28,23 +28,35 @@ object TextExtractor {
   private val odfExtensions = setOf("odt", "ods", "odp")
   private val legacyOfficeExtensions = setOf("doc", "xls", "ppt")
 
-  /** Devolve o texto extraído ou null se o formato não é suportado ou a leitura falhou. */
-  fun extract(file: File, extension: String): String? {
+  /** Formatos cujo texto pode ser extraído — usado para decidir se vale gerar uma prévia. */
+  val supportedExtensions: Set<String> =
+    plainTextExtensions + ooxmlExtensions + odfExtensions + legacyOfficeExtensions + setOf("rtf", "epub", "pdf")
+
+  /**
+   * Devolve o texto extraído ou null se o formato não é suportado ou a leitura falhou.
+   *
+   * [maxChars] limita o resultado e também interrompe a leitura mais cedo. A análise de
+   * privacidade usa o limite cheio; a miniatura de documento pede poucas centenas de caracteres,
+   * e aí não faz sentido ler e descompactar o arquivo inteiro. O valor é ajustado para a faixa
+   * de 1 a [MAX_CHARS].
+   */
+  fun extract(file: File, extension: String, maxChars: Int = MAX_CHARS): String? {
     if (!file.isFile || file.length() == 0L) return null
+    val limit = maxChars.coerceIn(1, MAX_CHARS)
     return try {
       when (extension.lowercase()) {
-        in plainTextExtensions -> readPlainText(file)
-        "rtf" -> stripRtf(readPlainText(file))
-        in ooxmlExtensions -> extractFromZip(file) { name ->
+        in plainTextExtensions -> readPlainText(file, limit)
+        "rtf" -> stripRtf(readPlainText(file, limit))
+        in ooxmlExtensions -> extractFromZip(file, limit) { name ->
           name.startsWith("word/") || name.startsWith("xl/sharedStrings") || name.startsWith("xl/worksheets/") ||
             name.startsWith("ppt/slides/") || name == "docProps/core.xml"
         }
-        in odfExtensions -> extractFromZip(file) { name -> name == "content.xml" || name == "meta.xml" }
-        "epub" -> extractFromZip(file) { name -> name.endsWith(".xhtml") || name.endsWith(".html") || name.endsWith(".opf") }
+        in odfExtensions -> extractFromZip(file, limit) { name -> name == "content.xml" || name == "meta.xml" }
+        "epub" -> extractFromZip(file, limit) { name -> name.endsWith(".xhtml") || name.endsWith(".html") || name.endsWith(".opf") }
         "pdf" -> extractFromPdf(file)
         in legacyOfficeExtensions -> extractPrintableStrings(readBytes(file))
         else -> null
-      }?.take(MAX_CHARS)
+      }?.take(limit)
     } catch (_: Exception) {
       null
     } catch (_: OutOfMemoryError) {
@@ -52,8 +64,8 @@ object TextExtractor {
     }
   }
 
-  private fun readBytes(file: File): ByteArray {
-    val size = minOf(file.length(), MAX_BYTES).toInt()
+  private fun readBytes(file: File, maxBytes: Long = MAX_BYTES): ByteArray {
+    val size = minOf(file.length(), maxBytes).toInt()
     val buffer = ByteArray(size)
     file.inputStream().use { input ->
       var read = 0
@@ -66,7 +78,9 @@ object TextExtractor {
     }
   }
 
-  private fun readPlainText(file: File): String = decode(readBytes(file))
+  // 4 bytes por caractere cobre o pior caso de UTF-8/UTF-16 para o trecho pedido.
+  private fun readPlainText(file: File, maxChars: Int = MAX_CHARS): String =
+    decode(readBytes(file, maxBytes = (maxChars.toLong() * 4).coerceAtMost(MAX_BYTES)))
 
   private fun decode(bytes: ByteArray): String {
     if (bytes.size >= 2) {
@@ -81,11 +95,11 @@ object TextExtractor {
     return if (replacements > utf8.length / 100) String(bytes, Charset.forName("ISO-8859-1")) else utf8
   }
 
-  private fun extractFromZip(file: File, accept: (String) -> Boolean): String {
+  private fun extractFromZip(file: File, maxChars: Int = MAX_CHARS, accept: (String) -> Boolean): String {
     val builder = StringBuilder()
     ZipInputStream(file.inputStream().buffered()).use { zip ->
       var entry = zip.nextEntry
-      while (entry != null && builder.length < MAX_CHARS) {
+      while (entry != null && builder.length < maxChars) {
         if (!entry.isDirectory && accept(entry.name)) {
           val bytes = readEntry(zip)
           builder.append(stripTags(String(bytes, Charsets.UTF_8))).append('\n')

@@ -6,9 +6,11 @@ import coil.ImageLoaderFactory
 import coil.decode.VideoFrameDecoder
 import coil.memory.MemoryCache
 import coil.request.CachePolicy
+import com.guardiao.arquivos.ui.thumbnail.DocumentPreviewDecoder
+import com.guardiao.arquivos.ui.thumbnail.PdfPageDecoder
 
 /**
- * Configura o carregador de miniaturas usado nas listas de fotos e vídeos.
+ * Configura o carregador de miniaturas usado nas listas.
  *
  * O cache em disco fica **desligado** de propósito: gravar miniaturas das fotos do usuário no
  * diretório de cache do app criaria uma segunda cópia de conteúdo pessoal no armazenamento, o que
@@ -18,8 +20,12 @@ class GuardiaoApp : Application(), ImageLoaderFactory {
 
   override fun newImageLoader(): ImageLoader =
     ImageLoader.Builder(this)
-      // Permite extrair um quadro de vídeos, além de decodificar imagens.
-      .components { add(VideoFrameDecoder.Factory()) }
+      .components {
+        // Um quadro de vídeos, a primeira página de PDFs e uma prévia do texto de documentos.
+        add(VideoFrameDecoder.Factory())
+        add(PdfPageDecoder.Factory())
+        add(DocumentPreviewDecoder.Factory())
+      }
       .memoryCache { MemoryCache.Builder(this@GuardiaoApp).maxSizePercent(0.15).build() }
       .diskCachePolicy(CachePolicy.DISABLED)
       .crossfade(true)

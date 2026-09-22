@@ -24,9 +24,17 @@ app ou **movê-lo para uma pasta de quarentena** escolhida pelo usuário (e rest
 - **Pontuação de risco de 0 a 100** em cada arquivo, mostrada como anel preenchido com o número no
   centro. As listas vêm **ordenadas do maior risco para o menor**, mantendo a divisão por tipo de
   arquivo.
-- **Miniaturas** das fotos e dos vídeos nas listas, no detalhe e na quarentena, para revisar sem
-  precisar abrir cada arquivo. São decodificadas no tamanho exibido e mantidas **apenas em
-  memória**: nenhuma cópia de conteúdo pessoal é gravada em cache no disco.
+- **Miniaturas** nas listas, no detalhe e na quarentena, para revisar sem precisar abrir cada
+  arquivo:
+  - fotos e vídeos (um quadro do vídeo);
+  - **PDF**: a primeira página renderizada de verdade, pelo `PdfRenderer` do próprio Android,
+    recortada no topo, que é onde ficam título e cabeçalho;
+  - **Word (.doc/.docx), ODT, RTF, TXT e afins**: o Android não tem renderizador para esses
+    formatos, então a miniatura é uma página desenhada na hora com as **primeiras linhas do texto
+    real** do documento. Mostra do que o arquivo trata, mas não reproduz a formatação.
+
+  Todas são decodificadas no tamanho exibido e mantidas **apenas em memória**: nenhuma cópia de
+  conteúdo pessoal é gravada em cache no disco.
 - **Abrir** qualquer arquivo no app apropriado (via FileProvider).
 - **Quarentena**: escolha uma pasta pelo seletor do sistema; arquivos movidos ficam listados na
   aba Quarentena, de onde podem ser abertos, **restaurados** para o local original ou esquecidos.
@@ -91,6 +99,7 @@ app/src/main/java/com/guardiao/arquivos/
 ├── quarantine/      # banco Room com o histórico e movimentação/restauração de arquivos
 └── ui/              # ViewModel e telas em Jetpack Compose
     ├── theme/       # paleta da marca, cores de risco e escala tipográfica
+    ├── thumbnail/   # geração das miniaturas de PDF e de documentos de texto
     └── screens/     # início, lista, detalhe, quarentena, miniaturas, anel de risco e o cão
 ```
 
@@ -102,3 +111,8 @@ app/src/main/java/com/guardiao/arquivos/
 - Arquivos dentro de `Android/data` de outros apps não são acessíveis pelo sistema.
 - Miniaturas de HEIC/HEIF dependem do Android 9 ou superior; abaixo disso a lista mostra o ícone da
   categoria no lugar da pré-visualização.
+- A miniatura de Word e afins é uma prévia do texto, não a página diagramada: fontes, imagens e
+  layout não aparecem. PDFs protegidos por senha e documentos sem texto (só imagens) caem no ícone
+  da categoria.
+- Planilhas e apresentações continuam com ícone: uma lista solta de células ou de tópicos não
+  ajuda a reconhecer o arquivo em miniatura.
