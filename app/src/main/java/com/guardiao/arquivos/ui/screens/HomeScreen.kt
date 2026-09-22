@@ -22,8 +22,10 @@ import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.OpenInBrowser
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -63,6 +65,8 @@ fun HomeScreen(
   onStartScan: () -> Unit,
   onCancelScan: () -> Unit,
   onOpenCategory: (FileCategory?) -> Unit,
+  onQuarantineHighRisk: () -> Unit,
+  onForgetOpenWithChoices: () -> Unit,
   modifier: Modifier = Modifier,
 ) {
   val hasResults = state.files.isNotEmpty() || state.scanStatus is ScanStatus.Finished
@@ -98,6 +102,20 @@ fun HomeScreen(
       )
     }
 
+    if (state.rememberedApps > 0) {
+      item {
+        SetupRow(
+          icon = Icons.Filled.OpenInBrowser,
+          title = "Apps para abrir arquivos",
+          subtitle =
+            "${formatCount(state.rememberedApps)} tipo(s) de arquivo abrem direto no app que você escolheu",
+          done = true,
+          actionLabel = "Esquecer",
+          onAction = onForgetOpenWithChoices,
+        )
+      }
+    }
+
     if (hasResults) {
       item { Spacer(Modifier.height(4.dp)) }
 
@@ -123,6 +141,17 @@ fun HomeScreen(
             label = "risco alto",
             tint = RiskLevel.HIGH.accent(),
             modifier = Modifier.weight(1f),
+          )
+        }
+      }
+
+      if (state.highRiskCount > 0) {
+        item {
+          HighRiskActionCard(
+            count = state.highRiskCount,
+            enabled = state.quarantineFolder != null && !state.busy,
+            needsFolder = state.quarantineFolder == null,
+            onQuarantineAll = onQuarantineHighRisk,
           )
         }
       }
@@ -312,6 +341,69 @@ private fun ScanCard(state: ScannerUiState, onStartScan: () -> Unit, onCancelSca
             onClick = onStartScan,
           )
         }
+      }
+    }
+  }
+}
+
+/**
+ * Atalho para mandar de uma vez tudo que a varredura marcou como risco alto.
+ *
+ * A confirmação fica a cargo de quem chama: mover dezenas de arquivos de uma vez merece um aviso
+ * antes, e não um toque sem volta aparente.
+ */
+@Composable
+private fun HighRiskActionCard(
+  count: Int,
+  enabled: Boolean,
+  needsFolder: Boolean,
+  onQuarantineAll: () -> Unit,
+) {
+  Card(
+    modifier = Modifier.fillMaxWidth(),
+    shape = RoundedCornerShape(16.dp),
+    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
+    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+  ) {
+    Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+      Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(
+          Icons.Filled.Shield,
+          contentDescription = null,
+          modifier = Modifier.size(26.dp),
+          tint = MaterialTheme.colorScheme.onErrorContainer,
+        )
+        Spacer(Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+          Text(
+            "${formatCount(count)} arquivo(s) de risco alto",
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.onErrorContainer,
+            fontWeight = FontWeight.SemiBold,
+          )
+          Text(
+            if (needsFolder) "Escolha uma pasta de quarentena para poder movê-los de uma vez."
+            else "Mande todos para a quarentena de uma vez. Dá para restaurar depois.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.85f),
+          )
+        }
+      }
+      Spacer(Modifier.height(12.dp))
+      Button(
+        onClick = onQuarantineAll,
+        enabled = enabled,
+        modifier = Modifier.fillMaxWidth().height(46.dp),
+        shape = RoundedCornerShape(13.dp),
+        colors =
+          ButtonDefaults.buttonColors(
+            containerColor = MaterialTheme.colorScheme.error,
+            contentColor = MaterialTheme.colorScheme.onError,
+          ),
+      ) {
+        Icon(Icons.Filled.Shield, contentDescription = null, modifier = Modifier.size(18.dp))
+        Spacer(Modifier.width(8.dp))
+        Text("Quarentenar todos de risco alto", style = MaterialTheme.typography.labelLarge)
       }
     }
   }

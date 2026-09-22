@@ -1,8 +1,9 @@
 package com.guardiao.arquivos.ui.screens
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,6 +23,7 @@ import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.SearchOff
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
@@ -44,8 +46,11 @@ import com.guardiao.arquivos.ui.formatSize
 fun FileListScreen(
   files: List<ScannedFile>,
   onlyFlagged: Boolean,
+  selectedPaths: Set<String>,
+  selectionMode: Boolean,
   onToggleOnlyFlagged: () -> Unit,
   onSelect: (ScannedFile) -> Unit,
+  onToggleSelection: (ScannedFile) -> Unit,
   modifier: Modifier = Modifier,
 ) {
   Column(modifier = modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
@@ -76,7 +81,8 @@ fun FileListScreen(
           color = MaterialTheme.colorScheme.onSurface,
         )
         Text(
-          "maior risco primeiro",
+          if (selectionMode) "toque para marcar ou desmarcar"
+          else "maior risco primeiro · segure para marcar vários",
           style = MaterialTheme.typography.labelSmall,
           color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -91,25 +97,58 @@ fun FileListScreen(
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 28.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
       ) {
-        items(files, key = { it.path }) { file -> FileRow(file = file, onClick = { onSelect(file) }) }
+        items(files, key = { it.path }) { file ->
+          FileRow(
+            file = file,
+            selected = file.path in selectedPaths,
+            selectionMode = selectionMode,
+            onOpen = { onSelect(file) },
+            onToggleSelection = { onToggleSelection(file) },
+          )
+        }
       }
     }
   }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun FileRow(file: ScannedFile, onClick: () -> Unit) {
+private fun FileRow(
+  file: ScannedFile,
+  selected: Boolean,
+  selectionMode: Boolean,
+  onOpen: () -> Unit,
+  onToggleSelection: () -> Unit,
+) {
   Card(
-    modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
+    modifier =
+      Modifier.fillMaxWidth().combinedClickable(
+        // Fora do modo de seleção o toque abre o arquivo; dentro dele, marca e desmarca.
+        onClick = { if (selectionMode) onToggleSelection() else onOpen() },
+        onLongClick = onToggleSelection,
+      ),
     shape = RoundedCornerShape(14.dp),
-    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+    colors =
+      CardDefaults.cardColors(
+        containerColor =
+          if (selected) MaterialTheme.colorScheme.primaryContainer
+          else MaterialTheme.colorScheme.surface
+      ),
     elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+    border =
+      BorderStroke(
+        if (selected) 1.5.dp else 1.dp,
+        if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
+      ),
   ) {
     Row(
       modifier = Modifier.fillMaxWidth().padding(12.dp),
       verticalAlignment = Alignment.CenterVertically,
     ) {
+      if (selectionMode) {
+        Checkbox(checked = selected, onCheckedChange = { onToggleSelection() })
+        Spacer(Modifier.width(4.dp))
+      }
       FileThumbnail(file = file, size = 50.dp)
       Spacer(Modifier.width(12.dp))
       Column(modifier = Modifier.weight(1f)) {

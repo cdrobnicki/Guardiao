@@ -194,25 +194,18 @@ class QuarantineManager(private val context: Context, private val dao: Quarantin
   }
 }
 
-/** Abre arquivos em apps externos por meio do FileProvider. */
+/**
+ * Gera as URIs usadas para abrir arquivos em outros apps.
+ *
+ * A montagem e o disparo do Intent ficam em
+ * [com.guardiao.arquivos.openwith.FileLauncher], que também lembra o app escolhido.
+ */
 object FileOpener {
   fun contentUri(context: Context, file: File): Uri? =
     runCatching {
       androidx.core.content.FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
     }
       .getOrNull()
-
-  /** Cria um Intent para abrir [file]; devolve null quando não há como gerar a URI. */
-  fun viewIntent(context: Context, file: File, mimeType: String): Intent? {
-    val uri = contentUri(context, file) ?: return null
-    return viewIntent(uri, mimeType)
-  }
-
-  fun viewIntent(uri: Uri, mimeType: String): Intent =
-    Intent(Intent.ACTION_VIEW).apply {
-      setDataAndType(uri, mimeType)
-      addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-    }
 
   fun mimeTypeFor(extension: String): String = FileScanner.mimeTypeFor(extension)
 }

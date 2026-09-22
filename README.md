@@ -35,9 +35,18 @@ app ou **movê-lo para uma pasta de quarentena** escolhida pelo usuário (e rest
 
   Todas são decodificadas no tamanho exibido e mantidas **apenas em memória**: nenhuma cópia de
   conteúdo pessoal é gravada em cache no disco.
-- **Abrir** qualquer arquivo no app apropriado (via FileProvider).
+- **Quarentena em lote**: um botão na tela inicial manda de uma vez todos os arquivos de risco
+  alto, com confirmação e barra de progresso. Na lista, segure um arquivo para entrar no modo de
+  seleção e marcar vários — a barra do topo mostra quantos estão marcados e move todos juntos.
+- **Abrir** qualquer arquivo no app apropriado (via FileProvider). Na primeira vez que um tipo de
+  arquivo é aberto, o seletor do sistema aparece; a escolha é **lembrada por tipo MIME** e das
+  próximas vezes o arquivo abre direto naquele app. Se o app for desinstalado ou deixar de abrir o
+  tipo, a escolha é esquecida e o seletor volta. A tela inicial mostra quantos tipos têm app
+  lembrado e permite esquecer todos.
 - **Quarentena**: escolha uma pasta pelo seletor do sistema; arquivos movidos ficam listados na
   aba Quarentena, de onde podem ser abertos, **restaurados** para o local original ou esquecidos.
+  A lista pode ser ordenada por **data, tamanho, tipo ou nome** e alternada entre cartões e uma
+  **visão em lista compacta**.
 
 ## Identidade visual
 
@@ -78,9 +87,9 @@ padrão do Java/Kotlin e as APIs do próprio Android.
    ou remova a linha `signingConfig = signingConfigs.getByName("debugConfig")` de `app/build.gradle.kts`.
 3. Execute no aparelho ou emulador (`gradle assembleDebug` gera `app/build/outputs/apk/debug/`).
 
-Os testes de unidade da análise (`gradle testDebugUnitTest`) cobrem validação de CPF/CNPJ/Luhn,
-detecção em texto, heurísticas de nome/pasta, extração de texto de DOCX e PDF, e a ordenação por
-pontuação de risco.
+Os testes de unidade (`gradle testDebugUnitTest`) cobrem validação de CPF/CNPJ/Luhn, detecção em
+texto, heurísticas de nome/pasta, extração de texto de DOCX e PDF, a ordenação por pontuação de
+risco e a ordenação da quarentena.
 
 O workflow do GitHub Actions (`.github/workflows/build-apk.yml`) roda os testes e publica o APK de
 debug como artefato a cada push.
@@ -96,7 +105,8 @@ app/src/main/java/com/guardiao/arquivos/
 │   ├── FileScanner.kt / StoragePermissions.kt
 │   ├── PatternDetectors.kt / FilenameHeuristics.kt / TextExtractor.kt
 │   └── PrivacyAnalyzer.kt / AndroidMediaInspector.kt
-├── quarantine/      # banco Room com o histórico e movimentação/restauração de arquivos
+├── quarantine/      # banco Room com o histórico, movimentação/restauração e ordenação
+├── openwith/        # memória de qual app abre cada tipo de arquivo
 └── ui/              # ViewModel e telas em Jetpack Compose
     ├── theme/       # paleta da marca, cores de risco e escala tipográfica
     ├── thumbnail/   # geração das miniaturas de PDF e de documentos de texto

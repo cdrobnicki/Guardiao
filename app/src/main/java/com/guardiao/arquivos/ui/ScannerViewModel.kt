@@ -1,7 +1,6 @@
 package com.guardiao.arquivos.ui
 
 import android.app.Application
-import android.content.Intent
 import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -9,6 +8,9 @@ import com.guardiao.arquivos.quarantine.FileOpener
 import com.guardiao.arquivos.quarantine.QuarantineDatabase
 import com.guardiao.arquivos.quarantine.QuarantineManager
 import com.guardiao.arquivos.quarantine.QuarantineRecord
+import com.guardiao.arquivos.quarantine.QuarantineSort
+import com.guardiao.arquivos.quarantine.sortedBy
+import com.guardiao.arquivos.openwith.OpenWithPreferences
 import com.guardiao.arquivos.scanner.FileCategory
 import com.guardiao.arquivos.scanner.FileScanner
 import com.guardiao.arquivos.scanner.RiskLevel
@@ -56,6 +58,15 @@ data class CategorySummary(
   val topScore: Int,
 )
 
+/** Progresso de uma quarentena em lote, para a barra mostrar quanto falta. */
+data class BulkProgress(val done: Int, val total: Int, val failed: Int = 0)
+
+/** Pedido de confirmação antes de mover vários arquivos de uma vez. */
+data class BulkConfirmation(val files: List<ScannedFile>, val title: String, val message: String)
+
+/** O que a tela precisa para abrir um arquivo em outro app. */
+data class OpenRequest(val uri: Uri, val mimeType: String)
+
 data class ScannerUiState(
   val hasPermission: Boolean = false,
   val scanStatus: ScanStatus = ScanStatus.Idle,
@@ -67,6 +78,14 @@ data class ScannerUiState(
   val onlyFlagged: Boolean = true,
   val busy: Boolean = false,
   val message: String? = null,
+  /** Caminhos marcados na lista. Vazio significa que a seleção múltipla está desligada. */
+  val selectedPaths: Set<String> = emptySet(),
+  val bulkProgress: BulkProgress? = null,
+  val confirmation: BulkConfirmation? = null,
+  val quarantineSort: QuarantineSort = QuarantineSort.RECENT,
+  val quarantineCompact: Boolean = false,
+  /** Quantos tipos de arquivo já têm um app lembrado para abrir. */
+  val rememberedApps: Int = 0,
 ) {
   val summaries: List<CategorySummary> =
     FileCategory.entries.map { category ->
@@ -89,6 +108,17 @@ data class ScannerUiState(
   val isScanning: Boolean
     get() = scanStatus is ScanStatus.Running
 
+  val selectionMode: Boolean
+    get() = selectedPaths.isNotEmpty()
+
+  /** Arquivos de risco alto ainda presentes, que é o que o botão da tela inicial move. */
+  val highRiskFiles: List<ScannedFile>
+    get() = files.filter { it.riskLevel == RiskLevel.HIGH }
+
+  /** Registros da quarentena já na ordem escolhida pelo usuário. */
+  val sortedQuarantine: List<QuarantineRecord>
+    get() = quarantined.sortedBy(quarantineSort)
+
   /** Arquivos visíveis na tela de lista atual, ordenados por risco. */
   fun visibleFiles(): List<ScannedFile> {
     val screen = screen as? Screen.FileList ?: return emptyList()
@@ -103,6 +133,7 @@ class ScannerViewModel(application: Application) : AndroidViewModel(application)
 
   private val scanner = FileScanner(application)
   private val quarantine = QuarantineManager(application, QuarantineDatabase.get(application).quarantineDao())
+  private val openWith = OpenWithPreferences(application)
 
   private val _uiState = MutableStateFlow(ScannerUiState())
   val uiState: StateFlow<ScannerUiState> = _uiState.asStateFlow()
@@ -111,6 +142,7 @@ class ScannerViewModel(application: Application) : AndroidViewModel(application)
 
   init {
     refreshPermission()
+    refreshRememberedApps()
     _uiState.update { it.copy(quarantineFolder = quarantine.folderDisplayName) }
     viewModelScope.launch {
       QuarantineDatabase.get(application).quarantineDao().observeAll().collect { records ->
@@ -122,6 +154,16 @@ class ScannerViewModel(application: Application) : AndroidViewModel(application)
   fun refreshPermission() {
     val granted = StoragePermissions.hasFullAccess(getApplication())
     _uiState.update { it.copy(hasPermission = granted) }
+  }
+
+  /**
+   * Chamado quando a tela volta ao primeiro plano. A permissão pode ter sido concedida na tela do
+   * sistema, e a escolha de app é gravada por um receptor fora daqui — as duas precisam ser
+   * relidas.
+   */
+  fun onResumed() {
+    refreshPermission()
+    refreshRememberedApps()
   }
 
   // ------------------------------------------------------------------------------------------
@@ -183,15 +225,50 @@ class ScannerViewModel(application: Application) : AndroidViewModel(application)
   // ------------------------------------------------------------------------------------------
 
   fun openCategory(category: FileCategory?) {
-    _uiState.update { it.copy(screen = Screen.FileList(category), selectedFile = null) }
+    _uiState.update {
+      it.copy(screen = Screen.FileList(category), selectedFile = null, selectedPaths = emptySet())
+    }
   }
 
   fun openQuarantine() {
-    _uiState.update { it.copy(screen = Screen.Quarantine, selectedFile = null) }
+    _uiState.update { it.copy(screen = Screen.Quarantine, selectedFile = null, selectedPaths = emptySet()) }
   }
 
   fun goHome() {
-    _uiState.update { it.copy(screen = Screen.Home, selectedFile = null) }
+    _uiState.update { it.copy(screen = Screen.Home, selectedFile = null, selectedPaths = emptySet()) }
+  }
+
+  // ------------------------------------------------------------------------------------------
+  // Seleção múltipla
+  // ------------------------------------------------------------------------------------------
+
+  fun toggleSelection(file: ScannedFile) {
+    _uiState.update { state ->
+      val marcados = state.selectedPaths
+      state.copy(
+        selectedPaths = if (file.path in marcados) marcados - file.path else marcados + file.path
+      )
+    }
+  }
+
+  fun selectAllVisible() {
+    _uiState.update { state -> state.copy(selectedPaths = state.visibleFiles().map { it.path }.toSet()) }
+  }
+
+  fun clearSelection() {
+    _uiState.update { it.copy(selectedPaths = emptySet()) }
+  }
+
+  // ------------------------------------------------------------------------------------------
+  // Aparência da quarentena
+  // ------------------------------------------------------------------------------------------
+
+  fun setQuarantineSort(order: QuarantineSort) {
+    _uiState.update { it.copy(quarantineSort = order) }
+  }
+
+  fun toggleQuarantineCompact() {
+    _uiState.update { it.copy(quarantineCompact = !it.quarantineCompact) }
   }
 
   fun selectFile(file: ScannedFile?) {
@@ -206,6 +283,9 @@ class ScannerViewModel(application: Application) : AndroidViewModel(application)
     _uiState.update { it.copy(message = null) }
   }
 
+  /** Permite às telas mostrarem um aviso pelo mesmo canal das demais mensagens. */
+  fun notify(text: String) = showMessage(text)
+
   private fun showMessage(text: String) {
     _uiState.update { it.copy(message = text) }
   }
@@ -214,14 +294,26 @@ class ScannerViewModel(application: Application) : AndroidViewModel(application)
   // Abrir e quarentena
   // ------------------------------------------------------------------------------------------
 
-  /** Intent para abrir o arquivo em outro app, ou null se não for possível. */
-  fun openIntent(file: ScannedFile): Intent? =
-    FileOpener.viewIntent(getApplication(), File(file.path), file.mimeType)
+  /** Endereço e tipo do arquivo, para a tela abri-lo no app lembrado ou pedir a escolha. */
+  fun openRequest(file: ScannedFile): OpenRequest? {
+    val uri = FileOpener.contentUri(getApplication(), File(file.path)) ?: return null
+    return OpenRequest(uri, file.mimeType)
+  }
 
-  fun openIntent(record: QuarantineRecord): Intent? {
+  fun openRequest(record: QuarantineRecord): OpenRequest? {
     val uri = quarantine.uriFor(record) ?: return null
-    val mime = FileOpener.mimeTypeFor(FileCategory.extensionOf(record.fileName))
-    return FileOpener.viewIntent(uri, mime)
+    return OpenRequest(uri, FileOpener.mimeTypeFor(FileCategory.extensionOf(record.fileName)))
+  }
+
+  fun refreshRememberedApps() {
+    _uiState.update { it.copy(rememberedApps = openWith.rememberedCount) }
+  }
+
+  /** Esquece todas as escolhas de app, voltando a perguntar em cada tipo. */
+  fun forgetOpenWithChoices() {
+    openWith.forgetAll()
+    refreshRememberedApps()
+    showMessage("Escolhas esquecidas. O app vai perguntar de novo qual aplicativo usar.")
   }
 
   fun setQuarantineFolder(uri: Uri) {
@@ -256,6 +348,92 @@ class ScannerViewModel(application: Application) : AndroidViewModel(application)
       }
     }
   }
+
+  // ------------------------------------------------------------------------------------------
+  // Quarentena em lote
+  // ------------------------------------------------------------------------------------------
+
+  /** Pede confirmação para mover todos os arquivos de risco alto encontrados na varredura. */
+  fun askQuarantineHighRisk() {
+    val alvos = _uiState.value.highRiskFiles
+    when {
+      !hasQuarantineFolder -> showMessage("Escolha uma pasta de quarentena primeiro.")
+      alvos.isEmpty() -> showMessage("Nenhum arquivo de risco alto para mover.")
+      else -> askConfirmation(alvos, "risco alto")
+    }
+  }
+
+  /** Pede confirmação para mover os arquivos marcados na lista. */
+  fun askQuarantineSelected() {
+    val marcados = _uiState.value.let { state -> state.files.filter { it.path in state.selectedPaths } }
+    when {
+      !hasQuarantineFolder -> showMessage("Escolha uma pasta de quarentena primeiro.")
+      marcados.isEmpty() -> showMessage("Nenhum arquivo marcado.")
+      else -> askConfirmation(marcados, "marcado(s)")
+    }
+  }
+
+  private fun askConfirmation(files: List<ScannedFile>, descricao: String) {
+    _uiState.update {
+      it.copy(
+        confirmation =
+          BulkConfirmation(
+            files = files,
+            title = "Mover ${files.size} arquivo(s) de $descricao?",
+            message =
+              "Eles saem das pastas de origem e vão para a pasta de quarentena. " +
+                "Você pode restaurar cada um depois, pela tela de quarentena.",
+          )
+      )
+    }
+  }
+
+  fun dismissConfirmation() {
+    _uiState.update { it.copy(confirmation = null) }
+  }
+
+  /** Executa o lote confirmado, relatando quantos foram e quantos falharam. */
+  fun confirmBulkQuarantine() {
+    val pendente = _uiState.value.confirmation ?: return
+    val alvos = pendente.files
+    viewModelScope.launch {
+      _uiState.update {
+        it.copy(busy = true, confirmation = null, bulkProgress = BulkProgress(0, alvos.size))
+      }
+      val movidos = mutableSetOf<String>()
+      var falhas = 0
+      var ultimoErro: String? = null
+
+      alvos.forEachIndexed { indice, file ->
+        quarantine.quarantine(file).fold(
+          onSuccess = { movidos += file.path },
+          onFailure = {
+            falhas++
+            ultimoErro = it.message
+          },
+        )
+        _uiState.update { it.copy(bulkProgress = BulkProgress(indice + 1, alvos.size, falhas)) }
+      }
+
+      _uiState.update { state ->
+        state.copy(
+          busy = false,
+          bulkProgress = null,
+          files = state.files.filterNot { it.path in movidos },
+          selectedPaths = emptySet(),
+          selectedFile = null,
+          message = bulkResultMessage(movidos.size, falhas, ultimoErro),
+        )
+      }
+    }
+  }
+
+  private fun bulkResultMessage(movidos: Int, falhas: Int, ultimoErro: String?): String =
+    when {
+      movidos == 0 -> "Nenhum arquivo foi movido${ultimoErro?.let { ": $it" } ?: "."}"
+      falhas == 0 -> "$movidos arquivo(s) movido(s) para a quarentena."
+      else -> "$movidos movido(s), $falhas não${ultimoErro?.let { " ($it)" } ?: ""}."
+    }
 
   fun restore(record: QuarantineRecord) {
     viewModelScope.launch {

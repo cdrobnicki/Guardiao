@@ -16,6 +16,18 @@
         android:name="android.permission.WRITE_EXTERNAL_STORAGE"
         android:maxSdkVersion="29" />
 
+    <!--
+      A partir do Android 11 um app não enxerga os outros. Para abrir um arquivo no app lembrado
+      pelo usuário — e para saber se ele ainda está instalado — é preciso declarar que procuramos
+      quem sabe exibir arquivos.
+    -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:mimeType="*/*" />
+        </intent>
+    </queries>
+
     <application
         android:name=".GuardiaoApp"
         android:allowBackup="true"
@@ -38,6 +50,11 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- Recebe do sistema qual app o usuário escolheu no seletor "Abrir com". -->
+        <receiver
+            android:name=".openwith.ChosenComponentReceiver"
+            android:exported="false" />
 
         <!-- Permite abrir os arquivos encontrados em outros apps. -->
         <provider
