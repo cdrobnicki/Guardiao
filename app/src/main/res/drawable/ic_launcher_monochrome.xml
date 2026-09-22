@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Camada monocromática usada pelos ícones temáticos do Android 13+.
+  Um único caminho com fillType evenOdd: olhos e nariz viram vazados,
+  então o sistema pode tingir a silhueta com qualquer cor.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#000000"
+        android:fillType="evenOdd"
+        android:pathData="M37,25 C28,27 21,39 23,50 C24,56 30,57 34,52 L43,40 Z M71,25 C80,27 87,39 85,50 C84,56 78,57 74,52 L65,40 Z M54,20 C66,20 75,30 76,42 C76,50 73,56 69,60 C67,69 61,78 54,78 C47,78 41,69 39,60 C35,56 32,50 32,42 C33,30 42,20 54,20 Z M54,61 C58,61 61,63.5 60,66.5 C59,69.5 57,70.5 54,70.5 C51,70.5 49,69.5 48,66.5 C47,63.5 50,61 54,61 Z M44,38.5 C46.5,38.5 48,40 48,42 C48,44 46.5,45.5 44,45.5 C41.5,45.5 40,44 40,42 C40,40 41.5,38.5 44,38.5 Z M64,38.5 C66.5,38.5 68,40 68,42 C68,44 66.5,45.5 64,45.5 C61.5,45.5 60,44 60,42 C60,40 61.5,38.5 64,38.5 Z" />
+</vector>

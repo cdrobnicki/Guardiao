@@ -77,3 +77,12 @@ data class ScanProgress(
   val currentPath: String,
   val finished: Boolean = false,
 )
+
+/**
+ * Ordena os arquivos com os de maior risco primeiro.
+ *
+ * O desempate é pelo mais recente: entre dois arquivos de mesma pontuação, o modificado há menos
+ * tempo tende a ser o mais relevante para o usuário.
+ */
+fun List<ScannedFile>.sortedByRisk(): List<ScannedFile> =
+  sortedWith(compareByDescending<ScannedFile> { it.analysis.score }.thenByDescending { it.lastModified })

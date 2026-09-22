@@ -1,34 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Cão farejador Jack Russell, de frente, em traço minimalista.
+  Todo o desenho cabe no círculo seguro do ícone adaptativo (raio 36 a partir de 54,54),
+  então nenhuma máscara de launcher corta orelhas ou focinho.
+-->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    
-    <!-- Main Jet Body (Atari Yellow) -->
+    <!-- Orelha esquerda, dobrada para frente (marrom). -->
     <path
-        android:fillColor="#FEE761"
-        android:pathData="
-            M50,30 h8 v8 h-8 z
-            M46,38 h16 v8 h-16 z
-            M46,46 h16 v24 h-16 z
-            M34,54 h40 v8 h-40 z
-            M26,62 h56 v4 h-56 z
-            M30,66 h4 v4 h-4 z
-            M74,66 h4 v4 h-4 z
-        " />
-        
-    <!-- Cockpit Detail (Cyan) -->
+        android:fillColor="#A96C33"
+        android:pathData="M37,25 C28,27 21,39 23,50 C24,56 30,57 34,52 L43,40 Z" />
+    <!-- Orelha direita (creme mais escuro, para separar da cabeça). -->
     <path
-        android:fillColor="#00E5FF"
-        android:pathData="M50,42 h8 v4 h-8 z" />
-        
-    <!-- Wing Stripes/Engines (Atari Red) -->
+        android:fillColor="#E8E2D6"
+        android:pathData="M71,25 C80,27 87,39 85,50 C84,56 78,57 74,52 L65,40 Z" />
+    <!-- Cabeça: crânio estreito de terrier afinando até o focinho. -->
     <path
-        android:fillColor="#E30022"
-        android:pathData="
-            M42,54 h4 v8 h-4 z
-            M62,54 h4 v8 h-4 z
-            M46,70 h4 v8 h-4 z
-            M58,70 h4 v8 h-4 z
-        " />
+        android:fillColor="#F8F5EF"
+        android:pathData="M54,20 C66,20 75,30 76,42 C76,50 73,56 69,60 C67,69 61,78 54,78 C47,78 41,69 39,60 C35,56 32,50 32,42 C33,30 42,20 54,20 Z" />
+    <!-- Mancha marrom sobre um olho, deixando a faixa branca central. -->
+    <path
+        android:fillColor="#C98A4B"
+        android:pathData="M54,20 C44,20 34,28 32,41 C32,49 34,56 38,60 C42,53 46,42 47,33 C48,26 50,22 54,20 Z" />
+    <!-- Nariz. -->
+    <path
+        android:fillColor="#17181A"
+        android:pathData="M54,61 C58,61 61,63.5 60,66.5 C59,69.5 57,70.5 54,70.5 C51,70.5 49,69.5 48,66.5 C47,63.5 50,61 54,61 Z" />
+    <!-- Olhos. -->
+    <path
+        android:fillColor="#17181A"
+        android:pathData="M44,38.5 C46.5,38.5 48,40 48,42 C48,44 46.5,45.5 44,45.5 C41.5,45.5 40,44 40,42 C40,40 41.5,38.5 44,38.5 Z" />
+    <path
+        android:fillColor="#17181A"
+        android:pathData="M64,38.5 C66.5,38.5 68,40 68,42 C68,44 66.5,45.5 64,45.5 C61.5,45.5 60,44 60,42 C60,40 61.5,38.5 64,38.5 Z" />
 </vector>

@@ -21,12 +21,29 @@ app ou **movê-lo para uma pasta de quarentena** escolhida pelo usuário (e rest
     (áudios sem tags de música são tratados como prováveis gravações de voz).
   - Cada arquivo recebe uma pontuação de 0 a 100 e um nível: **Alto**, **Médio**, **Baixo** ou
     **Sem indícios**, com a lista de evidências encontradas (dados sensíveis são exibidos mascarados).
+- **Pontuação de risco de 0 a 100** em cada arquivo, mostrada como anel preenchido com o número no
+  centro. As listas vêm **ordenadas do maior risco para o menor**, mantendo a divisão por tipo de
+  arquivo.
 - **Miniaturas** das fotos e dos vídeos nas listas, no detalhe e na quarentena, para revisar sem
   precisar abrir cada arquivo. São decodificadas no tamanho exibido e mantidas **apenas em
   memória**: nenhuma cópia de conteúdo pessoal é gravada em cache no disco.
 - **Abrir** qualquer arquivo no app apropriado (via FileProvider).
 - **Quarentena**: escolha uma pasta pelo seletor do sistema; arquivos movidos ficam listados na
   aba Quarentena, de onde podem ser abertos, **restaurados** para o local original ou esquecidos.
+
+## Identidade visual
+
+O ícone é um Jack Russell farejador em traço plano e minimalista: cabeça de frente, orelhas
+dobradas e a mancha caramelo assimétrica sobre um olho, que é a marca da raça. Vem como ícone
+adaptativo (`fundo` + `primeiro plano` + camada `monochrome` para os ícones temáticos do Android
+13+) e também como bitmap em cinco densidades, para os launchers do Android 7 e 8.
+
+A paleta do app sai do próprio ícone — azul-marinho e caramelo — e é **fixa**, não a cor dinâmica
+do sistema: as cores de risco precisam significar sempre a mesma coisa. Há tema claro e escuro, com
+as cores de risco em variantes próprias para manter o contraste legível nos dois.
+
+Enquanto a varredura roda, o mesmo cão aparece de perfil farejando o chão, com a cabeça balançando
+e marcas de cheiro subindo à frente do nariz.
 
 ## Permissões
 
@@ -54,7 +71,8 @@ padrão do Java/Kotlin e as APIs do próprio Android.
 3. Execute no aparelho ou emulador (`gradle assembleDebug` gera `app/build/outputs/apk/debug/`).
 
 Os testes de unidade da análise (`gradle testDebugUnitTest`) cobrem validação de CPF/CNPJ/Luhn,
-detecção em texto, heurísticas de nome/pasta e extração de texto de DOCX e PDF.
+detecção em texto, heurísticas de nome/pasta, extração de texto de DOCX e PDF, e a ordenação por
+pontuação de risco.
 
 O workflow do GitHub Actions (`.github/workflows/build-apk.yml`) roda os testes e publica o APK de
 debug como artefato a cada push.
@@ -72,7 +90,8 @@ app/src/main/java/com/guardiao/arquivos/
 │   └── PrivacyAnalyzer.kt / AndroidMediaInspector.kt
 ├── quarantine/      # banco Room com o histórico e movimentação/restauração de arquivos
 └── ui/              # ViewModel e telas em Jetpack Compose
-    └── screens/     # início, lista por categoria, detalhe, quarentena e miniaturas
+    ├── theme/       # paleta da marca, cores de risco e escala tipográfica
+    └── screens/     # início, lista, detalhe, quarentena, miniaturas, anel de risco e o cão
 ```
 
 ## Limitações conhecidas

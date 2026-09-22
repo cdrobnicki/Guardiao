@@ -1,10 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Cores da marca espelhadas de ui/theme/Color.kt, para o tema da janela. -->
 <resources>
-    <color name="purple_200">#FFBB86FC</color>
-    <color name="purple_500">#FF6200EE</color>
-    <color name="purple_700">#FF3700B3</color>
-    <color name="teal_200">#FF03DAC5</color>
-    <color name="teal_700">#FF018786</color>
-    <color name="black">#FF000000</color>
-    <color name="white">#FFFFFFFF</color>
+    <color name="brand_navy">#FF1A4E78</color>
+    <color name="brand_navy_dark">#FF0C2840</color>
+    <color name="brand_tan">#FFC98A4B</color>
+    <color name="window_background_light">#FFF7F9FB</color>
+    <color name="window_background_dark">#FF0F1317</color>
 </resources>

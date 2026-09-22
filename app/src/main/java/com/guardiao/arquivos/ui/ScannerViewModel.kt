@@ -15,6 +15,7 @@ import com.guardiao.arquivos.scanner.RiskLevel
 import com.guardiao.arquivos.scanner.ScanEvent
 import com.guardiao.arquivos.scanner.ScanProgress
 import com.guardiao.arquivos.scanner.ScannedFile
+import com.guardiao.arquivos.scanner.sortedByRisk
 import com.guardiao.arquivos.scanner.StoragePermissions
 import java.io.File
 import kotlinx.coroutines.Job
@@ -46,7 +47,14 @@ sealed class ScanStatus {
 }
 
 /** Resumo de uma categoria para a tela inicial. */
-data class CategorySummary(val category: FileCategory, val total: Int, val flagged: Int, val high: Int)
+data class CategorySummary(
+  val category: FileCategory,
+  val total: Int,
+  val flagged: Int,
+  val high: Int,
+  /** Maior pontuação de risco encontrada na categoria, para dar a dimensão do pior caso. */
+  val topScore: Int,
+)
 
 data class ScannerUiState(
   val hasPermission: Boolean = false,
@@ -68,11 +76,15 @@ data class ScannerUiState(
         total = inCategory.size,
         flagged = inCategory.count { it.analysis.hasPersonalInfo },
         high = inCategory.count { it.riskLevel == RiskLevel.HIGH },
+        topScore = inCategory.maxOfOrNull { it.analysis.score } ?: 0,
       )
     }
 
   val flaggedCount: Int
     get() = files.count { it.analysis.hasPersonalInfo }
+
+  val highRiskCount: Int
+    get() = files.count { it.riskLevel == RiskLevel.HIGH }
 
   val isScanning: Boolean
     get() = scanStatus is ScanStatus.Running
@@ -81,11 +93,9 @@ data class ScannerUiState(
   fun visibleFiles(): List<ScannedFile> {
     val screen = screen as? Screen.FileList ?: return emptyList()
     return files
-      .asSequence()
       .filter { screen.category == null || it.category == screen.category }
       .filter { !onlyFlagged || it.analysis.hasPersonalInfo }
-      .sortedWith(compareByDescending<ScannedFile> { it.analysis.score }.thenByDescending { it.lastModified })
-      .toList()
+      .sortedByRisk()
   }
 }
 
