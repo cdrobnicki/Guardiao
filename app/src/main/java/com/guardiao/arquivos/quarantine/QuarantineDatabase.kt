@@ -17,7 +17,7 @@ abstract class QuarantineDatabase : RoomDatabase() {
         ?: synchronized(this) {
           instance
             ?: Room.databaseBuilder(context.applicationContext, QuarantineDatabase::class.java, "guardiao_quarentena.db")
-              .fallbackToDestructiveMigration()
+              .fallbackToDestructiveMigration(dropAllTables = true)
               .build()
               .also { instance = it }
         }

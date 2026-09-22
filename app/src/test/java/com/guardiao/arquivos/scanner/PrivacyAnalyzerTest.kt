@@ -1,6 +1,7 @@
 package com.guardiao.arquivos.scanner
 
 import java.io.File
+import java.nio.file.Files
 import java.io.ByteArrayOutputStream
 import java.util.zip.Deflater
 import java.util.zip.ZipEntry
@@ -14,7 +15,8 @@ class PrivacyAnalyzerTest {
 
   private val analyzer = PrivacyAnalyzer()
 
-  private fun tempDir(): File = createTempDir("guardiao").also { it.deleteOnExit() }
+  private fun tempDir(): File =
+    Files.createTempDirectory("guardiao").toFile().also { it.deleteOnExit() }
 
   @Test
   fun `categoriza por extensao`() {

@@ -19,7 +19,7 @@ import java.text.DateFormat
 import java.util.Date
 import java.util.Locale
 
-private val ptBr = Locale("pt", "BR")
+private val ptBr: Locale = Locale.forLanguageTag("pt-BR")
 
 fun formatSize(bytes: Long): String {
   if (bytes < 1024) return "$bytes B"
