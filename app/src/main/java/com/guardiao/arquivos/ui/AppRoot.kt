@@ -150,6 +150,7 @@ fun AppRoot(viewModel: ScannerViewModel) {
           onSelectAll = viewModel::selectAllVisible,
           onQuarantine = viewModel::askQuarantineSelected,
           onIgnore = viewModel::ignoreSelected,
+          onDelete = viewModel::askDeleteSelected,
         )
       } else {
         MainTopBar(
@@ -217,38 +218,32 @@ fun AppRoot(viewModel: ScannerViewModel) {
   }
 
   state.confirmation?.let { pedido ->
+    val apagando = pedido.action == BulkAction.DELETE
     AlertDialog(
       onDismissRequest = viewModel::dismissConfirmation,
-      icon = { Icon(Icons.Filled.Shield, contentDescription = null) },
+      icon = {
+        Icon(
+          if (apagando) Icons.Filled.DeleteForever else Icons.Filled.Shield,
+          contentDescription = null,
+          tint = if (apagando) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+        )
+      },
       title = { Text(pedido.title) },
       text = { Text(pedido.message) },
       confirmButton = {
-        TextButton(onClick = viewModel::confirmBulkQuarantine) { Text("Mover") }
-      },
-      dismissButton = { TextButton(onClick = viewModel::dismissConfirmation) { Text("Cancelar") } },
-    )
-  }
-
-  state.pendingDeletion?.let { alvo ->
-    AlertDialog(
-      onDismissRequest = viewModel::dismissDeletion,
-      icon = { Icon(Icons.Filled.DeleteForever, contentDescription = null) },
-      title = { Text("Apagar “${alvo.name}”?") },
-      text = {
-        Text(
-          "O arquivo será removido do aparelho em definitivo. Não há lixeira: não dá para " +
-            "desfazer. Para guardá-lo sem apagar, use a quarentena."
-        )
-      },
-      confirmButton = {
         TextButton(
-          onClick = viewModel::confirmDelete,
-          colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
+          onClick = viewModel::confirmBulk,
+          colors =
+            if (apagando) {
+              ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+            } else {
+              ButtonDefaults.textButtonColors()
+            },
         ) {
-          Text("Apagar de vez")
+          Text(if (apagando) "Apagar de vez" else "Mover")
         }
       },
-      dismissButton = { TextButton(onClick = viewModel::dismissDeletion) { Text("Cancelar") } },
+      dismissButton = { TextButton(onClick = viewModel::dismissConfirmation) { Text("Cancelar") } },
     )
   }
 
@@ -263,7 +258,7 @@ fun AppRoot(viewModel: ScannerViewModel) {
       onQuarantine = { viewModel.quarantineFile(selected) },
       onChooseQuarantineFolder = chooseFolder,
       onIgnore = { viewModel.ignore(listOf(selected)) },
-      onDelete = { viewModel.askDelete(selected) },
+      onDelete = { viewModel.askDelete(listOf(selected)) },
     )
   }
 }
@@ -337,6 +332,7 @@ private fun SelectionTopBar(
   onSelectAll: () -> Unit,
   onQuarantine: () -> Unit,
   onIgnore: () -> Unit,
+  onDelete: () -> Unit,
 ) {
   TopAppBar(
     colors =
@@ -362,6 +358,9 @@ private fun SelectionTopBar(
       IconButton(onClick = onQuarantine, enabled = !busy) {
         Icon(Icons.Filled.Shield, contentDescription = "Mover marcados para a quarentena")
       }
+      IconButton(onClick = onDelete, enabled = !busy) {
+        Icon(Icons.Filled.DeleteForever, contentDescription = "Apagar os marcados")
+      }
     },
   )
 }
@@ -373,7 +372,7 @@ private fun BulkProgressBar(progress: BulkProgress?, busy: Boolean) {
     progress != null -> {
       Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp)) {
         Text(
-          "Movendo ${progress.done} de ${progress.total}…" +
+          "${progress.verb} ${progress.done} de ${progress.total}…" +
             if (progress.failed > 0) " (${progress.failed} falharam)" else "",
           style = MaterialTheme.typography.labelSmall,
           color = MaterialTheme.colorScheme.onSurfaceVariant,

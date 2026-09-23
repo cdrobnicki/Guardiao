@@ -39,8 +39,10 @@ app ou **movê-lo para uma pasta de quarentena** escolhida pelo usuário (e rest
   seleção múltipla. O arquivo continua onde está — apenas deixa de ser analisado nas próximas
   varreduras. A tela inicial mostra quantos estão ignorados e leva a uma lista onde cada um pode
   voltar a ser considerado.
-- **Excluir**: no detalhe do arquivo, apaga o arquivo do aparelho em definitivo, com confirmação.
-  Não há lixeira — para guardar sem apagar, existe a quarentena.
+- **Excluir**: no detalhe do arquivo ou em lote pela seleção múltipla, apaga do aparelho em
+  definitivo, com confirmação. Não há lixeira — para guardar sem apagar, existe a quarentena.
+- Mandar para a quarentena, ignorar ou excluir **tira o arquivo das listas e das contagens na
+  hora**, inclusive se a varredura ainda estiver rodando.
 - **Quarentena em lote**: um botão na tela inicial manda de uma vez todos os arquivos de risco
   alto, com confirmação e barra de progresso. Na lista, segure um arquivo para entrar no modo de
   seleção e marcar vários — a barra do topo mostra quantos estão marcados e move todos juntos.

@@ -65,11 +65,28 @@ data class CategorySummary(
   val topScore: Int,
 )
 
-/** Progresso de uma quarentena em lote, para a barra mostrar quanto falta. */
-data class BulkProgress(val done: Int, val total: Int, val failed: Int = 0)
+/** Progresso de um lote em andamento, para a barra mostrar quanto falta. */
+data class BulkProgress(
+  val done: Int,
+  val total: Int,
+  val failed: Int = 0,
+  /** "Movendo" ou "Apagando": a barra é a mesma, a ação não. */
+  val verb: String = "Movendo",
+)
 
-/** Pedido de confirmação antes de mover vários arquivos de uma vez. */
-data class BulkConfirmation(val files: List<ScannedFile>, val title: String, val message: String)
+/** O que fazer com os arquivos de um lote confirmado. */
+enum class BulkAction {
+  QUARANTINE,
+  DELETE,
+}
+
+/** Pedido de confirmação antes de agir sobre vários arquivos de uma vez. */
+data class BulkConfirmation(
+  val files: List<ScannedFile>,
+  val action: BulkAction,
+  val title: String,
+  val message: String,
+)
 
 /** O que a tela precisa para abrir um arquivo em outro app. */
 data class OpenRequest(val uri: Uri, val mimeType: String)
@@ -94,8 +111,6 @@ data class ScannerUiState(
   /** Quantos tipos de arquivo já têm um app lembrado para abrir. */
   val rememberedApps: Int = 0,
   val ignored: List<IgnoredFile> = emptyList(),
-  /** Arquivo aguardando confirmação de exclusão definitiva. */
-  val pendingDeletion: ScannedFile? = null,
 ) {
   val summaries: List<CategorySummary> =
     FileCategory.entries.map { category ->
@@ -152,6 +167,16 @@ class ScannerViewModel(application: Application) : AndroidViewModel(application)
 
   private var scanJob: Job? = null
 
+  /**
+   * Caminhos que saíram dos resultados nesta varredura, por quarentena, exclusão ou por terem
+   * sido ignorados.
+   *
+   * Enquanto a varredura roda, ela reemite a lista inteira do que já encontrou a cada poucos
+   * quadros. Sem este registro, um arquivo que o usuário acabou de tirar da lista reapareceria na
+   * emissão seguinte. É zerado no início de cada varredura, quando a lista recomeça do nada.
+   */
+  private val removedPaths = mutableSetOf<String>()
+
   init {
     refreshPermission()
     refreshRememberedApps()
@@ -164,6 +189,23 @@ class ScannerViewModel(application: Application) : AndroidViewModel(application)
     viewModelScope.launch {
       ignoredFiles.observeAll().collect { lista -> _uiState.update { it.copy(ignored = lista) } }
     }
+  }
+
+  /**
+   * Tira os caminhos dos resultados e anota que saíram, para a varredura em curso não trazê-los
+   * de volta. Usado por todas as ações que fazem um arquivo deixar a lista.
+   */
+  /** O que a varredura já encontrou, menos o que o usuário tirou da lista no meio do caminho. */
+  private fun visibleFrom(found: List<ScannedFile>): List<ScannedFile> =
+    if (removedPaths.isEmpty()) found.toList() else found.filterNot { it.path in removedPaths }
+
+  private fun dropFromResults(state: ScannerUiState, paths: Collection<String>): ScannerUiState {
+    val saindo = paths.toSet()
+    removedPaths += saindo
+    return state.copy(
+      files = state.files.filterNot { it.path in saindo },
+      selectedPaths = state.selectedPaths - saindo,
+    )
   }
 
   fun refreshPermission() {
@@ -198,6 +240,8 @@ class ScannerViewModel(application: Application) : AndroidViewModel(application)
     }
     val found = ArrayList<ScannedFile>()
     val excluded = listOfNotNull(quarantine.folderPath)
+    // Lista nova: o que foi removido na varredura anterior não vale mais.
+    removedPaths.clear()
     scanJob =
       viewModelScope.launch {
         try {
@@ -206,12 +250,14 @@ class ScannerViewModel(application: Application) : AndroidViewModel(application)
             when (event) {
               is ScanEvent.Found -> found += event.file
               is ScanEvent.Progress ->
-                _uiState.update { it.copy(scanStatus = ScanStatus.Running(event.progress), files = found.toList()) }
+                _uiState.update {
+                  it.copy(scanStatus = ScanStatus.Running(event.progress), files = visibleFrom(found))
+                }
               is ScanEvent.Finished ->
                 _uiState.update {
                   it.copy(
                     scanStatus = ScanStatus.Finished(event.total, event.matched, System.currentTimeMillis() - startedAt),
-                    files = found.toList(),
+                    files = visibleFrom(found),
                   )
                 }
             }
@@ -220,13 +266,15 @@ class ScannerViewModel(application: Application) : AndroidViewModel(application)
           _uiState.update {
             it.copy(
               scanStatus = ScanStatus.Finished(found.size, found.size, System.currentTimeMillis() - startedAt),
-              files = found.toList(),
+              files = visibleFrom(found),
               message = "Varredura interrompida. Resultados parciais mantidos.",
             )
           }
           throw e
         } catch (e: Exception) {
-          _uiState.update { it.copy(scanStatus = ScanStatus.Failed(e.message ?: "Erro desconhecido"), files = found.toList()) }
+          _uiState.update {
+            it.copy(scanStatus = ScanStatus.Failed(e.message ?: "Erro desconhecido"), files = visibleFrom(found))
+          }
         }
       }
   }
@@ -356,12 +404,8 @@ class ScannerViewModel(application: Application) : AndroidViewModel(application)
       _uiState.update { state ->
         result.fold(
           onSuccess = {
-            state.copy(
-              busy = false,
-              files = state.files.filterNot { it.path == file.path },
-              selectedFile = null,
-              message = "“${file.name}” movido para a quarentena.",
-            )
+            dropFromResults(state, listOf(file.path))
+              .copy(busy = false, selectedFile = null, message = "“${file.name}” movido para a quarentena.")
           },
           onFailure = { error -> state.copy(busy = false, message = "Falha ao mover: ${error.message}") },
         )
@@ -399,6 +443,7 @@ class ScannerViewModel(application: Application) : AndroidViewModel(application)
         confirmation =
           BulkConfirmation(
             files = files,
+            action = BulkAction.QUARANTINE,
             title = "Mover ${files.size} arquivo(s) de $descricao?",
             message =
               "Eles saem das pastas de origem e vão para a pasta de quarentena. " +
@@ -408,14 +453,48 @@ class ScannerViewModel(application: Application) : AndroidViewModel(application)
     }
   }
 
+  /** Pede confirmação para apagar os arquivos marcados na lista. */
+  fun askDeleteSelected() {
+    val marcados = _uiState.value.let { state -> state.files.filter { it.path in state.selectedPaths } }
+    if (marcados.isEmpty()) showMessage("Nenhum arquivo marcado.") else askDelete(marcados)
+  }
+
+  /** Pede confirmação para apagar. Vale para um arquivo só ou para vários. */
+  fun askDelete(files: List<ScannedFile>) {
+    if (files.isEmpty()) return
+    val umSo = files.size == 1
+    _uiState.update {
+      it.copy(
+        confirmation =
+          BulkConfirmation(
+            files = files,
+            action = BulkAction.DELETE,
+            title =
+              if (umSo) "Apagar “${files.first().name}”?"
+              else "Apagar ${files.size} arquivos?",
+            message =
+              (if (umSo) "O arquivo será removido" else "Os arquivos serão removidos") +
+                " do aparelho em definitivo. Não há lixeira: não dá para desfazer. " +
+                "Para guardar sem apagar, use a quarentena.",
+          )
+      )
+    }
+  }
+
   fun dismissConfirmation() {
     _uiState.update { it.copy(confirmation = null) }
   }
 
-  /** Executa o lote confirmado, relatando quantos foram e quantos falharam. */
-  fun confirmBulkQuarantine() {
+  /** Executa o lote confirmado, seja ele de quarentena ou de exclusão. */
+  fun confirmBulk() {
     val pendente = _uiState.value.confirmation ?: return
-    val alvos = pendente.files
+    when (pendente.action) {
+      BulkAction.QUARANTINE -> runBulkQuarantine(pendente.files)
+      BulkAction.DELETE -> runBulkDelete(pendente.files)
+    }
+  }
+
+  private fun runBulkQuarantine(alvos: List<ScannedFile>) {
     viewModelScope.launch {
       _uiState.update {
         it.copy(busy = true, confirmation = null, bulkProgress = BulkProgress(0, alvos.size))
@@ -436,14 +515,13 @@ class ScannerViewModel(application: Application) : AndroidViewModel(application)
       }
 
       _uiState.update { state ->
-        state.copy(
-          busy = false,
-          bulkProgress = null,
-          files = state.files.filterNot { it.path in movidos },
-          selectedPaths = emptySet(),
-          selectedFile = null,
-          message = bulkResultMessage(movidos.size, falhas, ultimoErro),
-        )
+        dropFromResults(state, movidos)
+          .copy(
+            busy = false,
+            bulkProgress = null,
+            selectedFile = null,
+            message = bulkResultMessage(movidos.size, falhas, ultimoErro),
+          )
       }
     }
   }
@@ -471,14 +549,13 @@ class ScannerViewModel(application: Application) : AndroidViewModel(application)
         .onSuccess {
           val caminhos = files.map { it.path }.toSet()
           _uiState.update { state ->
-            state.copy(
-              files = state.files.filterNot { it.path in caminhos },
-              selectedPaths = emptySet(),
-              selectedFile = null,
-              message =
-                if (files.size == 1) "“${files.first().name}” não aparecerá nas próximas varreduras."
-                else "${files.size} arquivo(s) não aparecerão nas próximas varreduras.",
-            )
+            dropFromResults(state, caminhos)
+              .copy(
+                selectedFile = null,
+                message =
+                  if (files.size == 1) "“${files.first().name}” não aparecerá nas próximas varreduras."
+                  else "${files.size} arquivo(s) não aparecerão nas próximas varreduras.",
+              )
           }
         }
         .onFailure { erro -> showMessage("Não foi possível ignorar: ${erro.message}") }
@@ -511,39 +588,62 @@ class ScannerViewModel(application: Application) : AndroidViewModel(application)
   // Exclusão definitiva
   // ------------------------------------------------------------------------------------------
 
-  fun askDelete(file: ScannedFile) {
-    _uiState.update { it.copy(pendingDeletion = file) }
-  }
-
-  fun dismissDeletion() {
-    _uiState.update { it.copy(pendingDeletion = null) }
-  }
-
   /** Apaga em definitivo. Não há lixeira: quem chama já confirmou com o usuário. */
-  fun confirmDelete() {
-    val alvo = _uiState.value.pendingDeletion ?: return
+  private fun runBulkDelete(alvos: List<ScannedFile>) {
     viewModelScope.launch {
-      _uiState.update { it.copy(busy = true, pendingDeletion = null) }
-      deleter.delete(alvo).fold(
-        onSuccess = {
-          _uiState.update { state ->
-            state.copy(
-              busy = false,
-              files = state.files.filterNot { it.path == alvo.path },
-              selectedPaths = state.selectedPaths - alvo.path,
-              selectedFile = null,
-              message = "“${alvo.name}” foi apagado do aparelho.",
-            )
-          }
-        },
-        onFailure = { erro ->
-          _uiState.update {
-            it.copy(busy = false, message = "Não foi possível apagar: ${erro.message}")
-          }
-        },
-      )
+      _uiState.update {
+        it.copy(
+          busy = true,
+          confirmation = null,
+          bulkProgress = BulkProgress(0, alvos.size, verb = APAGANDO),
+        )
+      }
+      val apagados = mutableSetOf<String>()
+      var falhas = 0
+      var ultimoErro: String? = null
+
+      alvos.forEachIndexed { indice, file ->
+        deleter.delete(file).fold(
+          onSuccess = { apagados += file.path },
+          onFailure = {
+            falhas++
+            ultimoErro = it.message
+          },
+        )
+        _uiState.update {
+          it.copy(bulkProgress = BulkProgress(indice + 1, alvos.size, falhas, APAGANDO))
+        }
+      }
+
+      _uiState.update { state ->
+        dropFromResults(state, apagados)
+          .copy(
+            busy = false,
+            bulkProgress = null,
+            selectedFile = null,
+            message = deleteResultMessage(apagados.size, falhas, ultimoErro, alvos),
+          )
+      }
     }
   }
+
+  private companion object {
+    const val APAGANDO = "Apagando"
+  }
+
+  private fun deleteResultMessage(
+    apagados: Int,
+    falhas: Int,
+    ultimoErro: String?,
+    alvos: List<ScannedFile>,
+  ): String =
+    when {
+      apagados == 0 -> "Nenhum arquivo foi apagado${ultimoErro?.let { ": $it" } ?: "."}"
+      falhas == 0 && apagados == 1 && alvos.size == 1 ->
+        "“${alvos.first().name}” foi apagado do aparelho."
+      falhas == 0 -> "$apagados arquivo(s) apagados do aparelho."
+      else -> "$apagados apagado(s), $falhas não${ultimoErro?.let { " ($it)" } ?: ""}."
+    }
 
   fun restore(record: QuarantineRecord) {
     viewModelScope.launch {
@@ -551,6 +651,9 @@ class ScannerViewModel(application: Application) : AndroidViewModel(application)
       val result = quarantine.restore(record)
       result.fold(
         onSuccess = { restored ->
+          // Voltou para o lugar de origem: pode aparecer nos resultados de novo.
+          removedPaths -= record.originalPath
+          removedPaths -= restored.absolutePath
           val reanalyzed = runCatching { scanner.analyzeFile(restored) }.getOrNull()
           _uiState.update { state ->
             state.copy(
